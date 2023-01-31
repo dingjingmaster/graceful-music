@@ -17,11 +17,42 @@ const char* const gPlayerStatusNames[] =
     NULL
 };
 
+enum _ProducerStatus
+{
+    PS_UNLOADED,
+    PS_STOPPED,
+    PS_PLAYING,
+    PS_PAUSED
+};
+
+enum _ConsumerStatus
+{
+    CS_STOPPED,
+    CS_PLAYING,
+    CS_PAUSED
+};
+
+typedef enum _ProducerStatus        ProducerStatus;
+typedef enum _ConsumerStatus        ConsumerStatus;
+
 static pthread_t            gProducerThread;
 static pthread_mutex_t      gProducerMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t       gProducerPlaying = PTHREAD_COND_INITIALIZER;
 
+static pthread_t            gConsumerThread;
+static pthread_mutex_t      gConsumerMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t       gConsumerPlaying = PTHREAD_COND_INITIALIZER;
+
 static int          gProducerRunning = 1;
+static int          gConsumerRunning = 1;
+
+static ConsumerStatus gConsumerStatus = CS_STOPPED;
+static ProducerStatus gProducerStatus = PS_UNLOADED;
+
+static unsigned long gConsumerPos = 0;
+static unsigned long gScalePos;
+
+static double gReplayGainScale = 1.0;
 
 
 void player_init(void)
@@ -60,7 +91,25 @@ void player_init(void)
          attrP = &attr;
      }
 
-     rc = pthread_create (&);
+     rc = pthread_create (&gProducerThread, NULL, producer_loop, NULL);
+     if (0 != rc) {
+         // error;
+     }
+
+     rc = pthread_create (&gConsumerThread, attrP, consumer_loop, NULL);
+     if (rc && attrP) {
+         // "could not create using real-time scheduling: %s", strerror(rc);
+         rc = pthread_create (&gConsumerThread, NULL, consumer_loop, NULL);
+     }
+
+     if (0 != rc) {
+         // error;
+     }
+
+     // 更新 player 信息
+     player_lock();
+     player_status_changed ();
+     player_unlock();
 }
 
 void player_exit(void)
