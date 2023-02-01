@@ -9,6 +9,20 @@
 #include "global.h"
 #include "buffer.h"
 
+
+#define PLAYER_LOCK() \
+    do { \
+		consumer_lock(); \
+		producer_lock(); \
+	} while (0)
+
+#define PLAYER_UNLOCK() \
+	do { \
+		producer_unlock(); \
+		consumer_unlock(); \
+	} while (0)
+
+
 const char* const gPlayerStatusNames[] =
 {
     "stopped",
@@ -35,6 +49,9 @@ enum _ConsumerStatus
 typedef enum _ProducerStatus        ProducerStatus;
 typedef enum _ConsumerStatus        ConsumerStatus;
 
+static void player_status_changed (void);
+static inline unsigned int buffer_second_size (void);
+
 static pthread_t            gProducerThread;
 static pthread_mutex_t      gProducerMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t       gProducerPlaying = PTHREAD_COND_INITIALIZER;
@@ -43,17 +60,18 @@ static pthread_t            gConsumerThread;
 static pthread_mutex_t      gConsumerMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t       gConsumerPlaying = PTHREAD_COND_INITIALIZER;
 
-static int          gProducerRunning = 1;
-static int          gConsumerRunning = 1;
+static int                  gProducerRunning = 1;
+static int                  gConsumerRunning = 1;
 
-static ConsumerStatus gConsumerStatus = CS_STOPPED;
-static ProducerStatus gProducerStatus = PS_UNLOADED;
+static ConsumerStatus       gConsumerStatus = CS_STOPPED;
+static ProducerStatus       gProducerStatus = PS_UNLOADED;
 
-static unsigned long gConsumerPos = 0;
-static unsigned long gScalePos;
+static unsigned long        gConsumerPos = 0;
+static unsigned long        gScalePos;
 
-static double gReplayGainScale = 1.0;
+static double               gReplayGainScale = 1.0;
 
+static SampleFormat         gBufferSF;
 
 void player_init(void)
 {
@@ -107,12 +125,110 @@ void player_init(void)
      }
 
      // 更新 player 信息
-     player_lock();
+     PLAYER_LOCK();
      player_status_changed ();
-     player_unlock();
+     PLAYER_UNLOCK();
 }
 
 void player_exit(void)
 {
+    PLAYER_LOCK();
+    gConsumerRunning = 0;
+    pthread_cond_broadcast (&gConsumerPlaying);
+    gProducerRunning = 0;
+    pthread_cond_broadcast (&gProducerPlaying);
+    PLAYER_UNLOCK();
 
+    int rc = pthread_join (gConsumerThread, NULL);
+    if (0 != rc) {
+        // warning
+    }
+    rc = pthread_join (gProducerThread, NULL);
+    if (0 != rc) {
+        //
+    }
+
+    buffer_free();
+}
+
+static void player_status_changed (void)
+{
+    unsigned int pos = 0;
+
+    if (gConsumerStatus == CS_PLAYING || gConsumerStatus == CS_PAUSED) {
+        pos = gConsumerPos / buffer_second_size();
+    }
+
+    // FIXME:// 未完
+
+}
+static inline unsigned int buffer_second_size (void)
+{
+    return SF_GET_SECOND_SIZE(gBufferSF);
+}
+
+void player_set_file (TrackInfo* ti)
+{
+    PLAYER_LOCK();
+    producer_set_file(ti);
+    if (gProducerStatus == PS_UNLOADED) {
+        consumer_stop();
+        goto out;
+    }
+
+    /* PS_STOPPED */
+    if (gConsumerStatus == CS_PLAYING || gConsumerStatus == CS_PAUSED) {
+        op_drop();
+        producer_play();
+        if (gProducerStatus == PS_UNLOADED) {
+            consumer_stop();
+            goto out;
+        }
+        change_sf(1);
+    }
+
+out:
+    player_status_changed();
+    if (gProducerStatus == PS_PLAYING) {
+        prebuffer();
+    }
+    PLAYER_UNLOCK();
+}
+
+void player_play_file (TrackInfo* ti)
+{
+    PLAYER_LOCK();
+
+    producer_set_file(ti);
+    if (gProducerStatus == PS_UNLOADED) {
+        consumer_stop();
+        goto out;
+    }
+
+    /* PS_STOPPED */
+    producer_play();
+
+    /* PS_UNLOADED,PS_PLAYING */
+    if (gProducerStatus == PS_UNLOADED) {
+        consumer_stop();
+        goto out;
+    }
+
+    /* PS_PLAYING */
+    if (gConsumerStatus == CS_STOPPED) {
+        consumer_play();
+        if (gConsumerStatus == CS_STOPPED) {
+            producer_stop();
+        }
+    } else {
+        op_drop();
+        change_sf(1);
+    }
+
+out:
+    player_status_changed();
+    if (gProducerStatus == PS_PLAYING) {
+        prebuffer();
+    }
+    PLAYER_UNLOCK();
 }
