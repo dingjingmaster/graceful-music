@@ -8,6 +8,12 @@
 #define CHUNK_SIZE                      (12 * 840 * 6)
 extern unsigned int                     gBufferNRChunks;
 
+extern char* gLogPath = NULL;
+extern char* gMusicDataDir = NULL;
+extern char* gMusicConfigDir = NULL;
+extern char* gMusicConfigPath = NULL;
+extern char* gMusicSocketPath = NULL;
+
 /**
  *  0           1 big_endian    0-1
  *  1           1 is_signed     0-1

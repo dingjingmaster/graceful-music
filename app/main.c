@@ -12,6 +12,7 @@
 
 char* gLogPath = NULL;
 const char* gMusicDataDir = NULL;
+const char* gMusicConfigDir = NULL;
 const char* gMusicConfigPath = NULL;
 const char* gMusicSocketPath = NULL;
 
@@ -19,6 +20,7 @@ int main (int argc, char* argv[])
 {
     // 初始化必须的全局变量
     gMusicDataDir = g_strdup_printf ("%s/graceful-music/", g_getenv ("XDG_RUNTIME_DIR"));
+    gMusicConfigDir = g_strdup_printf ("%s/.config/", g_getenv ("HOME"));
     gMusicSocketPath = g_strdup_printf ("%s/graceful-music.sock", gMusicDataDir);
     gMusicConfigPath = g_strdup_printf ("%s/.config/graceful-music.conf", g_getenv ("HOME"));
     gLogPath = g_strdup_printf ("%s/graceful-music.log", gMusicDataDir);
@@ -36,6 +38,7 @@ int main (int argc, char* argv[])
     INFO("\n%s start running...", PACKAGE_NAME);
 
     DEBUG("data dir: %s", gMusicDataDir);
+    DEBUG("config dir: %s", gMusicConfigDir);
     DEBUG("config path: %s", gMusicConfigPath);
     DEBUG("socket path: %s", gMusicSocketPath);
 

@@ -7,6 +7,7 @@ FILE(GLOB GM_SRC
         input.h                 input.c
         key-value.h             key-value.c
         channel-map.h           channel-map.c
+        player-control.h        player-control.c
 )
 
 add_executable(graceful-music main.c ${GM_SRC})

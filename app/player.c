@@ -6,6 +6,7 @@
 
 #include <pthread.h>
 
+#include "input.h"
 #include "global.h"
 #include "buffer.h"
 
@@ -354,7 +355,7 @@ out:
 static void producer_set_file (TrackInfo* ti)
 {
     producer_unload();
-    gIp = ip_new(ti->filename);
+    gIp = input_new(ti->fileName);
     producer_status_update(PS_STOPPED);
     file_changed(ti);
 }
@@ -363,7 +364,7 @@ static void producer_unload (void)
 {
     producer_stop();
     if (gProducerStatus == PS_STOPPED) {
-        ip_delete(ip);
+        ip_delete(gIp);
         producer_status_update(PS_UNLOADED);
     }
 }

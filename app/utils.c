@@ -21,3 +21,16 @@ const char* path_get_extension (const char* filename)
 
     return NULL;
 }
+
+static inline uint32_t hash_str (const char* s)
+{
+    uint32_t h = 5381;
+    const unsigned char* p = (const unsigned  char*) s;
+
+    while (*p) {
+        h *= 33;
+        h ^= *p++;
+    }
+
+    return h ^ (h >> 16);
+}
