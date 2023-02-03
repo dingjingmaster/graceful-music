@@ -2,6 +2,7 @@ FILE(GLOB GM_SRC
         global.h
         input-interface.h
         log.h                   log.c
+        cache.h                 cache.c
         utils.h                 utils.c
         input.h                 input.c
         key-value.h             key-value.c

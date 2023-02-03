@@ -251,9 +251,16 @@ static const InputPluginOps* get_ops_by_extension (const char* ext, GList** head
         if (0 >= ip->priority) {
             break;
         }
-
+        for (i = 0; exts[i]; ++i) {
+            if (0 == strcasecmp (ext, exts[i]) || 0 == strcmp ("*", exts[i])) {
+                *head = node;
+                rv = ip->ops;
+                goto end;
+            }
+        }
     }
 
+end:
     INPUT_UNLOCK();
 
     return rv;

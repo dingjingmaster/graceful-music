@@ -61,3 +61,4 @@ include_directories(${GLIB_INCLUDE_DIRS})
 include_directories(${GIO_UNIX_INCLUDE_DIRS})
 
 add_subdirectory(app)
+add_subdirectory(demo)
