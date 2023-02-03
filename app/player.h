@@ -7,8 +7,9 @@
 
 #include "track-info.h"
 
-typedef _PlayerStatus               PlayerStatus;
-typedef _ReplayGain                 ReplayGain;
+typedef enum _PlayerStatus          PlayerStatus;
+typedef enum _ReplayGain            ReplayGain;
+typedef struct _PlayerInfo          PlayerInfo;
 
 enum
 {
