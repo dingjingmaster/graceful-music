@@ -72,9 +72,10 @@ int cache_init (void)
 {
     unsigned int flags = 0;
 
-    if (sizeof (long) == 8) {
-        flags |= CACHE_64_BIT;
-    }
+//    if (8 == sizeof (long)) {
+    flags |= CACHE_64_BIT;
+//    }
+
 
     gCacheHeader[7] = flags & 0xFF;     flags >>= 8;
     gCacheHeader[6] = flags & 0xFF;     flags >>= 8;

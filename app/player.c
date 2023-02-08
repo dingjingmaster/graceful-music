@@ -378,15 +378,15 @@ static void producer_status_update (ProducerStatus status)
 
 static inline void file_changed (TrackInfo* ti)
 {
-    player_info_priv_lock();
-    if (player_info_priv.ti)
-        track_info_unref(player_info_priv.ti);
+    pthread_mutex_lock (&gPlayerInfoMutex);
+    if (gPlayerInfoPrivate.ti)
+        track_info_unref(gPlayerInfoPrivate.ti);
 
-    player_info_priv.ti = ti;
+    gPlayerInfoPrivate.ti = ti;
     update_rg_scale();
     player_metadata[0] = 0;
-    player_info_priv.file_changed = 1;
-    player_info_priv_unlock();
+    gPlayerInfoPrivate.fileChanged = 1;
+    pthread_mutex_unlock (&gPlayerInfoMutex);
 }
 
 static int change_sf (int drop)
@@ -452,7 +452,7 @@ static void* consumer_loop (void* arg)
         char *rpos;
 
         consumer_lock();
-        if (!consumer_running)
+        if (!gConsumerRunning)
             break;
 
         if (consumer_status == CS_PAUSED || consumer_status == CS_STOPPED) {
