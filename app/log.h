@@ -52,6 +52,7 @@ extern "C" {
                     "FUNC", func,                           \
                     "MESSAGE", msg)
 
+
 GLogWriterOutput log_handler(GLogLevelFlags level, const GLogField *fields, gsize nFields, gpointer udata);
 
 #ifdef __cplusplus

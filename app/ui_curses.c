@@ -997,6 +997,7 @@ static const char *pretty_path(const char *path)
 		home_len = strlen(gHomeDir);
 
 	if (strncmp(path, gHomeDir, home_len) || path[home_len] != '/')
+
 		return path;
 
 	gbuf_clear(&buf);
@@ -2331,6 +2332,7 @@ static void init_all(void)
 
 	lib_autosave_filename = xstrjoin(gConfigDir, "/lib.pl");
 	play_queue_autosave_filename = xstrjoin(gConfigDir, "/queue.pl");
+
 	lib_filename = xstrdup(lib_autosave_filename);
 
 	if (error_count) {
@@ -2462,6 +2464,7 @@ int curses_main(int argc, char *argv[])
 	misc_init();
 	if (server_address == NULL)
 		server_address = xstrdup(gSocketPath);
+
 
 	ip_load_plugins();
 	op_load_plugins();

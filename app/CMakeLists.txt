@@ -66,7 +66,10 @@ FILE(GLOB GM_SRC
         convert.h                   convert.c
 
         # ok
+<<<<<<< HEAD
         global.h
+=======
+>>>>>>> origin/dev
         log.h                       log.c
 )
 

@@ -1617,6 +1617,7 @@ void options_load(void)
 
 	/* load autosave config */
 	snprintf(filename, sizeof(filename), "%s/autosave", gConfigDir);
+
 	if (source_file(filename) == -1) {
 		char *def = xstrjoin(cmus_data_dir, "/rc");
 
@@ -1632,6 +1633,7 @@ void options_load(void)
 
 	/* load optional static config */
 	snprintf(filename, sizeof(filename), "%s/rc", gConfigDir);
+
 	if (source_file(filename) == -1) {
 		if (errno != ENOENT)
 			error_msg("loading %s: %s", filename, strerror(errno));
@@ -1653,6 +1655,7 @@ void options_exit(void)
 	int i;
 
 	snprintf(filename_tmp, sizeof(filename_tmp), "%s/autosave.tmp", gConfigDir);
+
 	f = fopen(filename_tmp, "w");
 	if (f == NULL) {
 		warn_errno("creating %s", filename_tmp);
@@ -1697,6 +1700,7 @@ void options_exit(void)
 	fclose(f);
 
 	snprintf(filename, sizeof(filename), "%s/autosave", gConfigDir);
+
 	i = rename(filename_tmp, filename);
 	if (i)
 		warn_errno("renaming %s to %s", filename_tmp, filename);
@@ -1759,6 +1763,7 @@ void resume_load(void)
 	struct resume resume = { .status = PLAYER_STATUS_STOPPED, .view = -1 };
 
 	snprintf(filename, sizeof(filename), "%s/resume", gConfigDir);
+
 	if (file_for_each_line(filename, handle_resume_line, &resume) == -1) {
 		if (errno != ENOENT)
 			error_msg("loading %s: %s", filename, strerror(errno));
@@ -1819,6 +1824,7 @@ void resume_exit(void)
 	int rc;
 
 	snprintf(filename_tmp, sizeof(filename_tmp), "%s/resume.tmp", gConfigDir);
+
 	f = fopen(filename_tmp, "w");
 	if (!f) {
 		warn_errno("creating %s", filename_tmp);
@@ -1847,6 +1853,7 @@ void resume_exit(void)
 	fclose(f);
 
 	snprintf(filename, sizeof(filename), "%s/resume", gConfigDir);
+
 	rc = rename(filename_tmp, filename);
 	if (rc)
 		warn_errno("renaming %s to %s", filename_tmp, filename);

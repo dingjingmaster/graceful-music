@@ -304,6 +304,7 @@ void search_mode_mouse(MEVENT *event)
 void search_mode_init(void)
 {
 	search_history_filename = xstrjoin(gConfigDir, "/search-history");
+
 	history_load(&search_history, search_history_filename, 100);
 }
 

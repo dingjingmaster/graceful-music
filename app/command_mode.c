@@ -1,4 +1,5 @@
 #include "global.h"
+
 #include "command_mode.h"
 #include "search_mode.h"
 #include "cmdline.h"
@@ -756,6 +757,7 @@ static void cmd_colorscheme(char *arg)
 	char filename[512];
 
 	snprintf(filename, sizeof(filename), "%s/%s.theme", gConfigDir, arg);
+
 	if (source_file(filename) == -1) {
 		snprintf(filename, sizeof(filename), "%s/%s.theme", cmus_data_dir, arg);
 		if (source_file(filename) == -1)
@@ -2562,6 +2564,7 @@ static void expand_colorscheme(const char *str)
 	PTR_ARRAY(array);
 
 	load_themes(gConfigDir, str, &array);
+
 	load_themes(cmus_data_dir, str, &array);
 
 	if (array.count) {
@@ -3132,6 +3135,7 @@ void command_mode_mouse(MEVENT *event)
 void commands_init(void)
 {
 	cmd_history_filename = xstrjoin(gConfigDir, "/command-history");
+
 	history_load(&cmd_history, cmd_history_filename, 2000);
 }
 

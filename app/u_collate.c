@@ -3,12 +3,11 @@
 #include "xmalloc.h"
 #include "ui_curses.h" /* using_utf8, charset */
 #include "convert.h"
+#include "global.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-
-extern char* gCharset;
 
 int u_strcoll(const char *str1, const char *str2)
 {
