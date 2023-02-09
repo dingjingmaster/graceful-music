@@ -1,0 +1,211 @@
+#ifndef CMUS_OPTIONS_H
+#define CMUS_OPTIONS_H
+
+#include "list.h"
+
+#define OPTION_MAX_SIZE	4096
+
+typedef void (*opt_get_cb)(void *data, char *buf, size_t size);
+typedef void (*opt_set_cb)(void *data, const char *buf);
+typedef void (*opt_toggle_cb)(void *data);
+
+enum {
+	OPT_PROGRAM_PATH = 1 << 0,
+};
+
+struct cmus_opt {
+	struct list_head node;
+
+	const char *name;
+
+	/* If there are many similar options you should write generic get(),
+	 * set() and optionally toggle() and distinguish the concrete option
+	 * via this pointer.
+	 */
+	void *data;
+
+	opt_get_cb get;
+	opt_set_cb set;
+
+	/* NULL if not toggle-able */
+	opt_toggle_cb toggle;
+
+	unsigned int flags;
+};
+
+extern struct list_head option_head;
+extern int nr_options;
+
+enum {
+	TREE_VIEW,
+	SORTED_VIEW,
+	PLAYLIST_VIEW,
+	QUEUE_VIEW,
+	BROWSER_VIEW,
+	FILTERS_VIEW,
+	HELP_VIEW,
+	NR_VIEWS
+};
+
+enum {
+	COLOR_CMDLINE_BG,
+	COLOR_CMDLINE_FG,
+	COLOR_ERROR,
+	COLOR_INFO,
+
+	COLOR_SEPARATOR,
+	COLOR_STATUSLINE_BG,
+	COLOR_STATUSLINE_FG,
+	COLOR_TITLELINE_BG,
+
+	COLOR_TITLELINE_FG,
+	COLOR_WIN_BG,
+	COLOR_WIN_CUR,
+	COLOR_WIN_CUR_SEL_BG,
+
+	COLOR_WIN_CUR_SEL_FG,
+	COLOR_WIN_DIR,
+	COLOR_WIN_FG,
+	COLOR_WIN_INACTIVE_CUR_SEL_BG,
+
+	COLOR_WIN_INACTIVE_CUR_SEL_FG,
+	COLOR_WIN_INACTIVE_SEL_BG,
+	COLOR_WIN_INACTIVE_SEL_FG,
+	COLOR_WIN_SEL_BG,
+
+	COLOR_WIN_SEL_FG,
+	COLOR_WIN_TITLE_BG,
+	COLOR_WIN_TITLE_FG,
+	COLOR_TRACKWIN_ALBUM_BG,
+
+	COLOR_TRACKWIN_ALBUM_FG,
+	NR_COLORS
+};
+
+enum {
+	COLOR_CMDLINE_ATTR,
+	COLOR_STATUSLINE_ATTR,
+	COLOR_TITLELINE_ATTR,
+	COLOR_WIN_ATTR,
+	COLOR_WIN_CUR_SEL_ATTR,
+	COLOR_CUR_SEL_ATTR,
+	COLOR_WIN_INACTIVE_CUR_SEL_ATTR,
+	COLOR_WIN_INACTIVE_SEL_ATTR,
+	COLOR_WIN_SEL_ATTR,
+	COLOR_WIN_TITLE_ATTR,
+	COLOR_TRACKWIN_ALBUM_ATTR,
+	COLOR_WIN_CUR_ATTR,
+	NR_ATTRS
+};
+
+enum shuffle_mode {
+	SHUFFLE_OFF,
+	SHUFFLE_TRACKS,
+	SHUFFLE_ALBUMS,
+	/* backwards compatability */
+	SHUFFLE_FALSE,
+	SHUFFLE_TRUE
+};
+
+#define BRIGHT (1 << 3)
+
+extern char *cdda_device;
+extern char *output_plugin;
+extern char *status_display_program;
+extern char *server_password;
+extern int auto_expand_albums_follow;
+extern int auto_expand_albums_search;
+extern int auto_expand_albums_selcur;
+extern int show_all_tracks;
+extern int auto_reshuffle;
+extern int confirm_run;
+extern int resume_cmus;
+extern int show_hidden;
+extern int show_current_bitrate;
+extern int show_playback_position;
+extern int show_remaining_time;
+extern int set_term_title;
+extern int wrap_search;
+extern int play_library;
+extern int repeat;
+extern int shuffle;
+extern int follow;
+extern int display_artist_sort_name;
+extern int smart_artist_sort;
+extern int scroll_offset;
+extern int rewind_offset;
+extern int skip_track_info;
+extern int mouse;
+extern int mpris;
+extern int time_show_leading_zero;
+extern int start_view;
+extern int stop_after_queue;
+extern int tree_width_percent;
+extern int tree_width_max;
+extern int pause_on_output_change;
+
+extern const char * const aaa_mode_names[];
+extern const char * const view_names[NR_VIEWS + 1];
+
+extern int colors[NR_COLORS];
+extern int attrs[NR_ATTRS];
+
+/* format string for tree window (tree view) */
+extern char *tree_win_format;
+extern char *tree_win_artist_format;
+
+/* format string for track window (tree view) */
+extern char *track_win_album_format;
+extern char *track_win_format;
+extern char *track_win_format_va;
+extern char *track_win_alt_format;
+
+/* format string for shuffle, sorted and play queue views */
+extern char *list_win_format;
+extern char *list_win_format_va;
+extern char *list_win_alt_format;
+
+/* format string for currently playing track */
+extern char *current_format;
+extern char *current_alt_format;
+
+/* format string for status line */
+extern char *statusline_format;
+
+/* format string for window title */
+extern char *window_title_format;
+extern char *window_title_alt_format;
+
+/* format string used to terminate all clipped text */
+extern char *clipped_text_format;
+extern char *clipped_text_internal;
+
+extern char *id3_default_charset;
+extern char *icecast_default_charset;
+
+/* build option list */
+void options_add(void);
+
+/* load options from the config file */
+void options_load(void);
+
+int source_file(const char *filename);
+
+/* save options */
+void options_exit(void);
+
+/* load resume file */
+void resume_load(void);
+/* save resume file */
+void resume_exit(void);
+
+void option_add(const char *name, const void *data, opt_get_cb get,
+		opt_set_cb set, opt_toggle_cb toggle, unsigned int flags);
+struct cmus_opt *option_find(const char *name);
+struct cmus_opt *option_find_silent(const char *name);
+void option_set(const char *name, const char *value);
+int parse_enum(const char *buf, int minval, int maxval, const char * const names[], int *val);
+
+void update_mouse(void);
+
+#endif
