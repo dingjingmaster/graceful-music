@@ -10,6 +10,7 @@
 #include "options.h"
 #include "xstrjoin.h"
 #include "misc.h"
+#include "log.h"
 
 #include <string.h>
 #include <strings.h>
@@ -19,6 +20,9 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <dlfcn.h>
+
+extern const char* libDir;
+extern const char* dataDir;
 
 struct output_plugin {
 	struct list_head node;
@@ -37,7 +41,7 @@ struct output_plugin {
 	unsigned int mixer_open : 1;
 };
 
-static const char *plugin_dir;
+static const char*  pluginDir;
 static LIST_HEAD(op_head);
 static struct output_plugin *op = NULL;
 
@@ -67,10 +71,10 @@ void op_load_plugins(void)
 	DIR *dir;
 	struct dirent *d;
 
-	plugin_dir = xstrjoin(cmus_lib_dir, "/op");
-	dir = opendir(plugin_dir);
+	pluginDir = xstrjoin(libDir, "/op");
+	dir = opendir(pluginDir);
 	if (dir == NULL) {
-		error_msg("couldn't open directory `%s': %s", plugin_dir, strerror(errno));
+		ERROR ("couldn't open directory `%s': %s", pluginDir, strerror(errno));
 		return;
 	}
 	while ((d = (struct dirent *) readdir(dir)) != NULL) {
@@ -80,19 +84,28 @@ void op_load_plugins(void)
 		char *ext;
 		bool err = false;
 
-		if (d->d_name[0] == '.')
-			continue;
-		ext = strrchr(d->d_name, '.');
-		if (ext == NULL)
-			continue;
-		if (strcmp(ext, ".so"))
-			continue;
+		if (d->d_name[0] == '.') {
+            continue;
+        }
 
-		snprintf(filename, sizeof(filename), "%s/%s", plugin_dir, d->d_name);
+		ext = strrchr(d->d_name, '.');
+		if (ext == NULL) {
+            DEBUG ("ignore '%s/%s'", pluginDir, d->d_name);
+            continue;
+        }
+
+		if (0 != g_strcmp0 (ext, ".so")) {
+            DEBUG ("ignore '%s/%s'", pluginDir, d->d_name);
+            continue;
+        }
+
+		snprintf(filename, sizeof(filename), "%s/%s", pluginDir, d->d_name);
+
+        DEBUG ("load plugin: '%s'", filename);
 
 		so = dlopen(filename, RTLD_NOW);
 		if (so == NULL) {
-			d_print("%s: %s\n", filename, dlerror());
+			ERROR ("dlopen '%s': '%s'", filename, dlerror());
 			continue;
 		}
 
@@ -103,12 +116,12 @@ void op_load_plugins(void)
 		symptr = dlsym(so, "op_priority");
 		plug->abi_version_ptr = dlsym(so, "op_abi_version");
 		if (!plug->pcm_ops || !plug->pcm_options || !symptr) {
-			error_msg("%s: missing symbol", filename);
+			ERROR ("'%s': missing symbol", filename);
 			err = true;
 		}
 		STATIC_ASSERT(OP_ABI_VERSION == 2);
 		if (!plug->abi_version_ptr || (*plug->abi_version_ptr != 1 && *plug->abi_version_ptr != 2)) {
-			error_msg("%s: incompatible plugin version", filename);
+			ERROR ("%s: incompatible plugin version", filename);
 			err = true;
 		}
 		if (err) {
@@ -464,7 +477,7 @@ void op_dump_plugins(void)
 {
 	struct output_plugin *o;
 
-	printf("\nOutput Plugins: %s\n", plugin_dir);
+	printf("\nOutput Plugins: %s\n", pluginDir);
 	list_for_each_entry(o, &op_head, node) {
 		printf("  %s\n", o->name);
 	}

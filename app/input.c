@@ -1,3 +1,4 @@
+#include "log.h"
 #include "convert.h"
 #include "input.h"
 #include "ip.h"
@@ -31,6 +32,9 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <strings.h>
+
+extern const char* libDir;
+extern const char* dataDir;
 
 struct input_plugin {
 	const struct input_plugin_ops *ops;
@@ -75,7 +79,7 @@ struct ip {
 	const struct input_plugin_opt *options;
 };
 
-static const char *plugin_dir;
+static const char* pluginDir;
 static LIST_HEAD(ip_head);
 
 /* protects ip->priority and ip_head */
@@ -477,16 +481,16 @@ void ip_load_plugins(void)
 	DIR *dir;
 	struct dirent *d;
 
-	plugin_dir = xstrjoin(cmus_lib_dir, "/ip");
-	dir = opendir(plugin_dir);
+	pluginDir = xstrjoin(libDir, "/ip");
+	dir = opendir(pluginDir);
 	if (dir == NULL) {
-		error_msg("couldn't open directory `%s': %s", plugin_dir, strerror(errno));
+		ERROR ("couldn't open directory `%s': %s", pluginDir, strerror(errno));
 		return;
 	}
 
 	ip_wrlock();
-	while ((d = (struct dirent *) readdir(dir)) != NULL) {
-		char filename[512];
+	while (NULL != (d = (struct dirent *) readdir (dir))) {
+		char filename[512] = {0};
 		struct ip *ip;
 		void *so;
 		char *ext;
@@ -494,19 +498,28 @@ void ip_load_plugins(void)
 		const unsigned *abi_version_ptr;
 		bool err = false;
 
-		if (d->d_name[0] == '.')
-			continue;
-		ext = strrchr(d->d_name, '.');
-		if (ext == NULL)
-			continue;
-		if (strcmp(ext, ".so"))
-			continue;
+		if (d->d_name[0] == '.') {
+            continue;
+        }
 
-		snprintf(filename, sizeof(filename), "%s/%s", plugin_dir, d->d_name);
+		ext = strrchr(d->d_name, '.');
+		if (ext == NULL) {
+            DEBUG ("ignore '%s/%s'", pluginDir, d->d_name);
+            continue;
+        }
+
+		if (0 != g_strcmp0 (ext, ".so")) {
+            DEBUG ("ignore '%s/%s'", pluginDir, d->d_name);
+            continue;
+        }
+
+		snprintf(filename, sizeof(filename), "%s/%s", pluginDir, d->d_name);
+
+        DEBUG ("load plugin: '%s'", filename);
 
 		so = dlopen(filename, RTLD_NOW);
 		if (so == NULL) {
-			d_print("%s: %s\n", filename, dlerror());
+			ERROR ("open '%s' error, '%s'", filename, dlerror());
 			continue;
 		}
 
@@ -519,11 +532,11 @@ void ip_load_plugins(void)
 		ip->ops = dlsym(so, "ip_ops");
 		ip->options = dlsym(so, "ip_options");
 		if (!priority_ptr || !ip->extensions || !ip->mime_types || !ip->ops || !ip->options) {
-			error_msg("%s: missing symbol", filename);
+			ERROR ("%s: missing symbol", filename);
 			err = true;
 		}
 		if (!abi_version_ptr || *abi_version_ptr != IP_ABI_VERSION) {
-			error_msg("%s: incompatible plugin version", filename);
+			ERROR ("%s: incompatible plugin version", filename);
 			err = true;
 		}
 		if (err) {
@@ -538,8 +551,11 @@ void ip_load_plugins(void)
 
 		list_add_tail(&ip->node, &ip_head);
 	}
+
 	list_mergesort(&ip_head, sort_ip);
+
 	closedir(dir);
+
 	ip_unlock();
 }
 
@@ -1016,7 +1032,7 @@ void ip_dump_plugins(void)
 	struct ip *ip;
 	int i;
 
-	printf("Input Plugins: %s\n", plugin_dir);
+	printf("Input Plugins: %s", pluginDir);
 	ip_rdlock();
 	list_for_each_entry(ip, &ip_head, node) {
 		printf("  %s:\n    Priority: %d\n    File Types:", ip->name, ip->priority);

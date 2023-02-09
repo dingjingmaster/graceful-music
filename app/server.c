@@ -34,6 +34,7 @@
 #include "keyval.h"
 #include "convert.h"
 #include "format_print.h"
+#include "log.h"
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -56,7 +57,8 @@ LIST_HEAD(client_head);
 
 static char *title_buf = NULL;
 
-static union {
+static union
+{
 	struct sockaddr sa;
 	struct sockaddr_un un;
 	struct sockaddr_storage sas;
@@ -94,10 +96,9 @@ static int cmd_status(struct client *client)
 		gbuf_addf(&buf, "file %s\n", escape(ti->filename));
 		gbuf_addf(&buf, "duration %d\n", ti->duration);
 		gbuf_addf(&buf, "position %d\n", player_info.pos);
-		for (i = 0; ti->comments[i].key; i++)
-			gbuf_addf(&buf, "tag %s %s\n",
-					ti->comments[i].key,
-					escape(ti->comments[i].val));
+		for (i = 0; ti->comments[i].key; i++) {
+            gbuf_addf(&buf, "tag %s %s\n", ti->comments[i].key, escape(ti->comments[i].val));
+        }
 	}
 
 	/* add track metadata to cmus-status */
@@ -149,7 +150,7 @@ static int cmd_status(struct client *client)
 static int cmd_format_print(struct client *client, char *arg)
 {
 	if (run_only_safe_commands) {
-		d_print("trying to execute unsafe command over net\n");
+		DEBUG ("trying to execute unsafe command over net");
 		return write_all(client->fd, "\n", strlen("\n"));
 	}
 
@@ -160,7 +161,7 @@ static int cmd_format_print(struct client *client, char *arg)
 		args = parse_cmd(arg, &args_idx, &ac);
 
 	if (args == NULL) {
-		error_msg("not enough arguments\n");
+		ERROR ("not enough arguments");
 		return write_all(client->fd, "\n", strlen("\n"));
 	}
 
@@ -168,8 +169,9 @@ static int cmd_format_print(struct client *client, char *arg)
 
 	const struct format_option *fopts = get_global_fopts();
 	for (i = 0; i < ac; ++i) {
-		if (format_valid(args[i], fopts))
-			format_print(&buf, 0, args[i], fopts);
+		if (format_valid(args[i], fopts)) {
+            format_print(&buf, 0, args[i], fopts);
+        }
 		gbuf_add_ch(&buf, '\n');
 		free(args[i]);
 	}
@@ -197,13 +199,14 @@ static void read_commands(struct client *client)
 {
 	char buf[1024];
 	int pos = 0;
-	if (!client->authenticated)
-		client->authenticated = addr.sa.sa_family == AF_UNIX;
+	if (!client->authenticated) {
+        client->authenticated = addr.sa.sa_family == AF_UNIX;
+    }
 
 	while (1) {
 		int rc, s, i;
 
-		rc = read(client->fd, buf + pos, sizeof(buf) - pos);
+		rc = read (client->fd, buf + pos, sizeof(buf) - pos);
 		if (rc == -1) {
 			if (errno == EINTR)
 				continue;
@@ -231,7 +234,7 @@ static void read_commands(struct client *client)
 			if (!client->authenticated) {
 				if (!server_password) {
 					msg = "password is unset, tcp/ip disabled";
-					d_print("%s\n", msg);
+					DEBUG ("%s", msg);
 					ret = send_answer(client->fd, "%s\n\n", msg);
 					goto close;
 				}
@@ -240,7 +243,7 @@ static void read_commands(struct client *client)
 				client->authenticated = !strcmp(line, server_password);
 				if (!client->authenticated) {
 					msg = "authentication failed";
-					d_print("%s\n", msg);
+					DEBUG ("%s", msg);
 					ret = send_answer(client->fd, "%s\n\n", msg);
 					goto close;
 				}
@@ -248,8 +251,9 @@ static void read_commands(struct client *client)
 				continue;
 			}
 
-			while (isspace((unsigned char)*line))
-				line++;
+			while (isspace((unsigned char)*line)) {
+                line++;
+            }
 
 			if (*line == '/') {
 				int restricted = 0;
@@ -291,14 +295,14 @@ static void read_commands(struct client *client)
 				ret = write_all(client->fd, "\n", 1);
 			}
 			if (ret < 0) {
-				d_print("write: %s\n", strerror(errno));
+				DEBUG ("write: %s", strerror(errno));
 				goto close;
 			}
 		}
 		memmove(buf, buf + s, pos - s);
 		pos -= s;
 	}
-	return;
+
 close:
 	close(client->fd);
 	list_del(&client->node);
@@ -356,57 +360,68 @@ void server_init(char *address)
 		}
 
 		rc = getaddrinfo(address, port, &hints, &result);
-		if (rc != 0)
-			die("getaddrinfo: %s\n", gai_strerror(rc));
+		if (rc != 0) {
+            DIE ("getaddrinfo: %s", gai_strerror(rc));
+        }
 		memcpy(&addr.sa, result->ai_addr, result->ai_addrlen);
 		addrlen = result->ai_addrlen;
 		freeaddrinfo(result);
 	}
 
 	server_socket = socket(addr.sa.sa_family, SOCK_STREAM, 0);
-	if (server_socket == -1)
-		die_errno("socket");
+	if (server_socket == -1) {
+        DIE ("socket");
+    }
 
 	if (bind(server_socket, &addr.sa, addrlen) == -1) {
 		int sock;
 
-		if (errno != EADDRINUSE)
-			die_errno("bind");
+		if (errno != EADDRINUSE) {
+            ERROR ("bind");
+        }
 
 		/* address already in use */
-		if (addr.sa.sa_family != AF_UNIX)
-			die("cmus is already listening on %s:%s\n", address, port);
+		if (addr.sa.sa_family != AF_UNIX) {
+            DIE ("%s is already listening on %s:%s", PACKAGE_NAME, address, port);
+        }
 
 		/* try to connect to server */
 		sock = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (sock == -1)
-			die_errno("socket");
+		if (sock == -1) {
+            DIE ("socket");
+        }
 
 		if (connect(sock, &addr.sa, addrlen) == -1) {
-			if (errno != ENOENT && errno != ECONNREFUSED)
-				die_errno("connect");
+			if (errno != ENOENT && errno != ECONNREFUSED) {
+                DIE ("connect");
+            }
 
 			/* server not running => dead socket */
 
 			/* try to remove dead socket */
-			if (unlink(addr.un.sun_path) == -1 && errno != ENOENT)
-				die_errno("unlink");
-			if (bind(server_socket, &addr.sa, addrlen) == -1)
-				die_errno("bind");
+			if (unlink(addr.un.sun_path) == -1 && errno != ENOENT) {
+                DIE ("unlink");
+            }
+			if (bind(server_socket, &addr.sa, addrlen) == -1) {
+                DIE ("bind");
+            }
 		} else {
 			/* server already running */
-			die("cmus is already listening on socket %s\n", address);
+			DIE ("%s is already listening on socket %s", PACKAGE_NAME, address);
 		}
 		close(sock);
 	}
 
-	if (listen(server_socket, MAX_CLIENTS) == -1)
-		die_errno("listen");
+	if (listen(server_socket, MAX_CLIENTS) == -1) {
+        DIE ("listen");
+    }
 }
 
 void server_exit(void)
 {
 	close(server_socket);
-	if (addr.sa.sa_family == AF_UNIX)
-		unlink(addr.un.sun_path);
+
+	if (addr.sa.sa_family == AF_UNIX) {
+        unlink(addr.un.sun_path);
+    }
 }

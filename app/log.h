@@ -14,12 +14,29 @@ extern "C" {
                     "MESSAGE", __VA_ARGS__);
 
 
+#define LOG_DEBUG(...) \
+    g_log_structured(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG,       \
+                    "FILE", __FILE__,                       \
+                    "LINE", __LINE__,                       \
+                    "FUNC", __FUNCTION__,                   \
+                    "MESSAGE", __VA_ARGS__);
+
+
 #define INFO(...) \
     g_log_structured(G_LOG_DOMAIN, G_LOG_LEVEL_INFO,        \
                     "FILE", __FILE__,                       \
                     "LINE", __LINE__,                       \
                     "FUNC", __FUNCTION__,                   \
                     "MESSAGE", __VA_ARGS__);
+
+
+#define LOG_INFO(...) \
+    g_log_structured(G_LOG_DOMAIN, G_LOG_LEVEL_INFO,        \
+                    "FILE", __FILE__,                       \
+                    "LINE", __LINE__,                       \
+                    "FUNC", __FUNCTION__,                   \
+                    "MESSAGE", __VA_ARGS__);
+
 
 #define WARNING(...) \
     g_log_structured(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,     \
@@ -28,12 +45,30 @@ extern "C" {
                     "FUNC", __FUNCTION__,                   \
                     "MESSAGE", __VA_ARGS__);
 
+
+#define LOG_WARNING(...) \
+    g_log_structured(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,     \
+                    "FILE", __FILE__,                       \
+                    "LINE", __LINE__,                       \
+                    "FUNC", __FUNCTION__,                   \
+                    "MESSAGE", __VA_ARGS__);
+
+
 #define ERROR(...) \
     g_log_structured(G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,       \
                     "FILE", __FILE__,                       \
                     "LINE", __LINE__,                       \
                     "FUNC", __FUNCTION__,                   \
                     "MESSAGE", __VA_ARGS__);
+
+
+#define LOG_ERROR(...) \
+    g_log_structured(G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,       \
+                    "FILE", __FILE__,                       \
+                    "LINE", __LINE__,                       \
+                    "FUNC", __FUNCTION__,                   \
+                    "MESSAGE", __VA_ARGS__);
+
 
 #define DIE(...) \
 {                                                           \

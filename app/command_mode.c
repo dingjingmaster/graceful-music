@@ -45,6 +45,10 @@ static char *history_search_text = NULL;
 static int arg_expand_cmd = -1;
 static int mute_vol_l = 0, mute_vol_r = 0;
 
+
+extern const char* libDir;
+extern const char* dataDir;
+
 /* view {{{ */
 
 void view_clear(int view)
@@ -759,7 +763,7 @@ static void cmd_colorscheme(char *arg)
 	snprintf(filename, sizeof(filename), "%s/%s.theme", gConfigDir, arg);
 
 	if (source_file(filename) == -1) {
-		snprintf(filename, sizeof(filename), "%s/%s.theme", cmus_data_dir, arg);
+		snprintf(filename, sizeof(filename), "%s/%s.theme", dataDir, arg);
 		if (source_file(filename) == -1)
 			error_msg("sourcing %s: %s", filename, strerror(errno));
 	}
@@ -2565,7 +2569,7 @@ static void expand_colorscheme(const char *str)
 
 	load_themes(gConfigDir, str, &array);
 
-	load_themes(cmus_data_dir, str, &array);
+	load_themes(dataDir, str, &array);
 
 	if (array.count) {
 		ptr_array_sort(&array, strptrcmp);

@@ -12,6 +12,7 @@
 #include "worker.h"
 #include "uchar.h"
 #include "mergesort.h"
+#include "global.h"
 
 #include <unistd.h>
 #include <stdio.h>
@@ -45,7 +46,7 @@ static struct searchable *pl_searchable;
 
 static char *pl_name_to_pl_file(const char *name)
 {
-	return xstrjoin(cmus_playlist_dir, "/", name);
+	return xstrjoin(gPlaylistDir, "/", name);
 }
 
 static void pl_to_iter(struct playlist *pl, struct iter *iter)
@@ -240,15 +241,15 @@ static void pl_load_one(const char *file)
 static void pl_load_all(void)
 {
 	struct directory dir;
-	if (dir_open(&dir, cmus_playlist_dir))
-		die_errno("error: cannot open playlist directory %s", cmus_playlist_dir);
+	if (dir_open(&dir, gPlaylistDir))
+		die_errno("error: cannot open playlist directory %s", gPlaylistDir);
 	const char *file;
 	while ((file = dir_read(&dir))) {
 		if (strcmp(file, ".") == 0 || strcmp(file, "..") == 0)
 			continue;
 		if (!S_ISREG(dir.st.st_mode)) {
 			error_msg("error: %s in %s is not a regular file", file,
-					cmus_playlist_dir);
+					gPlaylistDir);
 			continue;
 		}
 		pl_load_one(file);

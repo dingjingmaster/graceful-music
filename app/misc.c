@@ -21,9 +21,8 @@
 #define DATADIR     "/usr/share"
 #define LIBDIR      "/usr/lib"
 
-const char *cmus_playlist_dir = NULL;
-const char *cmus_data_dir = NULL;
-const char *cmus_lib_dir = NULL;
+const char*     dataDir = NULL;
+const char*     libDir = NULL;
 
 char **get_words(const char *text)
 {
@@ -184,7 +183,7 @@ const char *get_filename(const char *path)
 
 static void move_old_playlist(void)
 {
-    char *default_playlist = xstrjoin(cmus_playlist_dir, "/default");
+    char *default_playlist = xstrjoin(gPlaylistDir, "/default");
     char *old_playlist = xstrjoin(gConfigDir, "/playlist.pl");
     int rc = rename(old_playlist, default_playlist);
     if (rc && errno != ENOENT)
@@ -196,41 +195,16 @@ static void move_old_playlist(void)
 
 int misc_init(void)
 {
-    char *cmus_home = xstrjoin(gHomeDir, "/.graceful-music");
-    int cmus_home_exists = dir_exists(cmus_home);
-
-    if (cmus_home_exists == 1) {
-    } else if (cmus_home_exists == -1) {
-        die_errno("error: opening `%s'", cmus_home);
-    } else {
-        char *xdg_config_home = get_non_empty_env("XDG_CONFIG_HOME");
-        if (xdg_config_home == NULL) {
-            xdg_config_home = xstrjoin(gHomeDir, "/.config");
-        }
-
-        make_dir(xdg_config_home);
-
-        free(xdg_config_home);
+    int playlistDirIsNew = dir_exists(gPlaylistDir) == 0;
+    make_dir(gPlaylistDir);
+    if (playlistDirIsNew) {
+        move_old_playlist();
     }
 
-    free(cmus_home);
 
-    cmus_playlist_dir = get_non_empty_env("CMUS_PLAYLIST_DIR");
-    if (!cmus_playlist_dir)
-        cmus_playlist_dir = xstrjoin(gConfigDir, "/playlists");
-
-    int playlist_dir_is_new = dir_exists(cmus_playlist_dir) == 0;
-    make_dir(cmus_playlist_dir);
-    if (playlist_dir_is_new)
-        move_old_playlist();
-
-    cmus_lib_dir = getenv("CMUS_LIB_DIR");
-    if (!cmus_lib_dir)
-        cmus_lib_dir = LIBDIR "/graceful-music";
-
-    cmus_data_dir = getenv("CMUS_DATA_DIR");
-    if (!cmus_data_dir)
-        cmus_data_dir = DATADIR "/graceful-music";
+    // FIXME:// 去掉
+    libDir = LIBDIR "/cmus";
+    dataDir = DATADIR "/cmus";
 
     return 0;
 }

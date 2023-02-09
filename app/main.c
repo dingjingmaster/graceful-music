@@ -13,6 +13,7 @@ const char*         gHomeDir = NULL;
 const char*         gConfigDir = NULL;
 const char*         gSocketPath = NULL;
 const char*         gRuntimeDir = NULL;
+const char*         gPlaylistDir = NULL;
 
 int main (int argc, char* argv[])
 {
@@ -41,6 +42,15 @@ int main (int argc, char* argv[])
     gConfigDir = g_strdup_printf ("%s/graceful-music", configDir);
     if (g_mkdir_with_parents (gConfigDir, 0755)) {
         DIE ("create config dir: '%s' error, '%s'", gConfigDir, g_strerror (errno));
+    }
+
+    gPlaylistDir = g_strdup_printf ("%s/playlist", gConfigDir);
+    if (!gPlaylistDir) {
+        DIE ("get playlist dir: '%s' error '%s'", gPlaylistDir, g_strerror (errno));
+    }
+
+    if (g_mkdir_with_parents (gPlaylistDir, 0755)) {
+        DIE ("create config dir: '%s' error, '%s'", gPlaylistDir, g_strerror (errno));
     }
 
     gSocketPath = g_strdup_printf ("%s/graceful-music.sock", gRuntimeDir);

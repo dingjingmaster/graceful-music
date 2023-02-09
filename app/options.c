@@ -72,6 +72,9 @@ int tree_width_percent = 33;
 int tree_width_max = 0;
 int pause_on_output_change = 0;
 
+extern const char* libDir;
+extern const char* dataDir;
+
 int colors[NR_COLORS] = {
 	-1,
 	-1,
@@ -1619,7 +1622,7 @@ void options_load(void)
 	snprintf(filename, sizeof(filename), "%s/autosave", gConfigDir);
 
 	if (source_file(filename) == -1) {
-		char *def = xstrjoin(cmus_data_dir, "/rc");
+		char *def = xstrjoin(dataDir, "/rc");
 
 		if (errno != ENOENT)
 			error_msg("loading %s: %s", filename, strerror(errno));

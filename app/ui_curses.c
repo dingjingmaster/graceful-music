@@ -107,8 +107,6 @@ static time_t error_time = 0;
 static int msg_is_error;
 static int error_count = 0;
 
-static char *server_address = NULL;
-
 /* used for messages to the client */
 static int client_fd = -1;
 
@@ -2301,7 +2299,7 @@ static void init_all(void)
 	main_thread = pthread_self();
 	cmus_track_request_init();
 
-	server_init(server_address);
+	server_init(gSocketPath);
 
 	/* does not select output plugin */
 	player_init();
@@ -2462,10 +2460,8 @@ int curses_main(int argc, char *argv[])
     using_utf8 = 1;
 
 	misc_init();
-	if (server_address == NULL)
-		server_address = xstrdup(gSocketPath);
 
-
+    // FIXME://  去掉插件
 	ip_load_plugins();
 	op_load_plugins();
 	if (list_plugins) {

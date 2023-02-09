@@ -6,7 +6,7 @@
 #include "op.h"
 #include "utils.h"
 #include "xmalloc.h"
-#include "debug.h"
+#include "log.h"
 #include "compiler.h"
 #include "options.h"
 #include "mpris.h"
@@ -450,7 +450,7 @@ static void player_error(const char *msg)
 	player_info_priv.error_msg = xstrdup(msg);
 	player_info_priv_unlock();
 
-	d_print("ERROR: '%s'\n", msg);
+	ERROR ("ERROR: '%s'\n", msg);
 }
 
 static void CMUS_FORMAT(2, 3) player_ip_error(int rc, const char *format, ...)
@@ -1036,7 +1036,7 @@ void player_init(void)
 
 	rc = pthread_create(&consumer_thread, attrp, consumer_loop, NULL);
 	if (rc && attrp) {
-		d_print("could not create thread using real-time scheduling: %s\n", strerror(rc));
+		DEBUG ("could not create thread using real-time scheduling: %s", strerror(rc));
 		rc = pthread_create(&consumer_thread, NULL, consumer_loop, NULL);
 	}
 	BUG_ON(rc);
@@ -1212,8 +1212,10 @@ void player_seek(double offset, int relative, int start_playing)
 				_producer_stop();
 				player_unlock();
 				return;
-			} else
-				_player_status_changed();
+			}
+            else {
+                _player_status_changed();
+            }
 		}
 	}
 	if (consumer_status == CS_PLAYING || consumer_status == CS_PAUSED) {
@@ -1224,7 +1226,7 @@ void player_seek(double offset, int relative, int start_playing)
 		duration = ip_duration(ip);
 		if (duration < 0) {
 			/* can't seek */
-			d_print("can't seek\n");
+			LOG_DEBUG ("can't seek")
 			player_unlock();
 			return;
 		}
@@ -1243,7 +1245,7 @@ void player_seek(double offset, int relative, int start_playing)
 					new_pos = 0.0;
 				if (new_pos < pos - 0.5) {
 					/* must seek at least 0.5s */
-					d_print("must seek at least 0.5s\n");
+					LOG_DEBUG ("must seek at least 0.5s");
 					player_unlock();
 					return;
 				}
@@ -1251,7 +1253,7 @@ void player_seek(double offset, int relative, int start_playing)
 		} else {
 			new_pos = offset;
 			if (new_pos < 0.0) {
-				d_print("seek offset negative\n");
+				LOG_DEBUG ("seek offset negative");
 				player_unlock();
 				return;
 			}
@@ -1264,7 +1266,7 @@ void player_seek(double offset, int relative, int start_playing)
 /* 		d_print("seeking %g/%g (%g from eof)\n", new_pos, duration, duration - new_pos); */
 		rc = ip_seek(ip, new_pos);
 		if (rc == 0) {
-			d_print("doing op_drop after seek\n");
+			LOG_DEBUG ("doing op_drop after seek");
 			op_drop();
 			reset_buffer();
 			consumer_pos = new_pos * buffer_second_size();
@@ -1277,7 +1279,7 @@ void player_seek(double offset, int relative, int start_playing)
 			}
 		} else {
 			player_ip_error(rc, "seeking in file %s", ip_get_filename(ip));
-			d_print("error: ip_seek returned %d\n", rc);
+			LOG_DEBUG ("error: ip_seek returned %d", rc);
 		}
 	}
 	mpris_seeked();
@@ -1301,11 +1303,11 @@ void player_set_op(const char *name)
 		op_close();
 
 	if (name) {
-		d_print("setting op to '%s'\n", name);
+		LOG_DEBUG ("setting op to '%s'", name);
 		rc = op_select(name);
 	} else {
 		/* first initialized plugin */
-		d_print("selecting first initialized op\n");
+		LOG_DEBUG ("selecting first initialized op");
 		rc = op_select_any();
 	}
 	if (rc) {
