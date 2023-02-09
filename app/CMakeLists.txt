@@ -1,3 +1,6 @@
+include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
+include(${CMAKE_SOURCE_DIR}/app/plugins/plugins.cmake)
+
 FILE(GLOB GM_SRC
         ape.h                       ape.c
         browser.h                   browser.c
@@ -71,6 +74,6 @@ FILE(GLOB GM_SRC
         utils.h                     utils.c
 )
 
-add_executable(graceful-music main.c ${GM_SRC})
+add_executable(graceful-music main.c ${GM_SRC} ${COMMON_SRC} ${PLUGINS_SRC})
 target_link_libraries(graceful-music ${GIO_LIBRARIES} -lm -lpthread -lncursesw -ldl -lcddb -lcdio_cdda -lcdio -lmad -lmodplug -lwavpack -lfaad -lavcodec -lpulse -lsystemd)
 target_link_directories(graceful-music PUBLIC ${GIO_INCLUDE_DIRS})

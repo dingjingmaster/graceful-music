@@ -1,0 +1,8 @@
+//
+// Created by dingjing on 2/9/23.
+//
+
+#ifndef GRACEFUL_MUSIC_INPUT_INTERFACE_H
+#define GRACEFUL_MUSIC_INPUT_INTERFACE_H
+
+#endif //GRACEFUL_MUSIC_INPUT_INTERFACE_H
