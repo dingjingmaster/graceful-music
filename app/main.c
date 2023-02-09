@@ -1,48 +1,54 @@
-//
-// Created by dingjing on 2/2/23.
-//
-
-#include <glib.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <errno.h>
+#include <locale.h>
 #include <gio/gio.h>
 
 #include "log.h"
+#include "ui_curses.h"
 
-char* gLogPath = NULL;
-const char* gMusicDataDir = NULL;
-const char* gMusicConfigDir = NULL;
-const char* gMusicConfigPath = NULL;
-const char* gMusicSocketPath = NULL;
+
+char*               gLogPath = NULL;
+char*               gCharset = "UTF-8";
+
+const char*         gHomeDir = NULL;
+const char*         gConfigDir = NULL;
+const char*         gSocketPath = NULL;
+const char*         gRuntimeDir = NULL;
 
 int main (int argc, char* argv[])
 {
-    // 初始化必须的全局变量
-    gMusicDataDir = g_strdup_printf ("%s/graceful-music/", g_getenv ("XDG_RUNTIME_DIR"));
-    gMusicConfigDir = g_strdup_printf ("%s/.config/", g_getenv ("HOME"));
-    gMusicSocketPath = g_strdup_printf ("%s/graceful-music.sock", gMusicDataDir);
-    gMusicConfigPath = g_strdup_printf ("%s/.config/graceful-music.conf", g_getenv ("HOME"));
-    gLogPath = g_strdup_printf ("%s/graceful-music.log", gMusicDataDir);
-
-    if (gMusicDataDir) {
-        g_autoptr(GFile) f = g_file_new_for_path (gMusicDataDir);
-        if (!g_file_query_exists (f, NULL)) {
-            g_mkdir_with_parents (gMusicDataDir, 0750);
-        }
-    }
-
-    // 日志
+    gLogPath = g_strdup_printf ("%s/%s.log", g_get_home_dir(), PACKAGE_NAME);
     g_log_set_writer_func (log_handler, NULL, NULL);
 
-    INFO("\n%s start running...", PACKAGE_NAME);
+    setlocale (LC_ALL, "zh_CN.UTF-8");
 
-    DEBUG("data dir: %s", gMusicDataDir);
-    DEBUG("config dir: %s", gMusicConfigDir);
-    DEBUG("config path: %s", gMusicConfigPath);
-    DEBUG("socket path: %s", gMusicSocketPath);
+    INFO ("%s starting ...", PACKAGE_NAME)
 
-    INFO("%s exited!\n", PACKAGE_NAME);
+    gHomeDir = g_get_home_dir();
+    if (gHomeDir == NULL) {
+        DIE ("environment variable 'HOME' not set")
+    }
+
+    gRuntimeDir = g_get_user_runtime_dir();
+    if (gRuntimeDir == NULL) {
+        DIE ("environment variable 'XDG_RUNTIME_DIR' not set")
+    }
+
+    char* configDir = g_get_user_config_dir();
+    if (configDir == NULL) {
+        DIE ("environment variable 'XDG_CONFIG_DIR' not set")
+    }
+
+    gConfigDir = g_strdup_printf ("%s/graceful-music", configDir);
+    if (g_mkdir_with_parents (gConfigDir, 0755)) {
+        DIE ("create config dir: '%s' error, '%s'", gConfigDir, g_strerror (errno));
+    }
+
+    gSocketPath = g_strdup_printf ("%s/graceful-music.sock", gRuntimeDir);
+    if (!gSocketPath) {
+        DIE ("get socket path: '%s' error.", gSocketPath);
+    }
+
+    curses_main (argc, argv);
 
     return 0;
 }

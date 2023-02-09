@@ -1,24 +1,20 @@
-//
-// Created by dingjing on 2/3/23.
-//
+#ifndef CMUS_CACHE_H
+#define CMUS_CACHE_H
 
-#ifndef GRACEFUL_MUSIC_CACHE_H
-#define GRACEFUL_MUSIC_CACHE_H
-#include "track-info.h"
+#include "track_info.h"
+#include "locking.h"
 
-typedef struct _CacheMutex          CacheMutex;
-typedef struct _FifoWatcher         FifoWatcher;
+extern struct fifo_mutex cache_mutex;
 
-int         cache_init          (void);
-int         cache_close         (void);
-TrackInfo*  cache_get_ti        (const char* fileName, int force);
-void        cache_remove_ti     (TrackInfo* ti);
-TrackInfo** cache_refresh       (int* count, int force);
-TrackInfo*  lookup_cache_entry  (const char* fileName, unsigned int hash);
+#define cache_lock() fifo_mutex_lock(&cache_mutex)
+#define cache_yield() fifo_mutex_yield(&cache_mutex)
+#define cache_unlock() fifo_mutex_unlock(&cache_mutex)
 
-void        cache_mutex_lock    (CacheMutex* cacheMutex);
-void        cache_mutex_unlock  (CacheMutex* cacheMutex);
-void        cache_mutex_yield   (CacheMutex* cacheMutex);
+int cache_init(void);
+int cache_close(void);
+struct track_info *cache_get_ti(const char *filename, int force);
+void cache_remove_ti(struct track_info *ti);
+struct track_info **cache_refresh(int *count, int force);
+struct track_info *lookup_cache_entry(const char *filename, unsigned int hash);
 
-
-#endif //GRACEFUL_MUSIC_CACHE_H
+#endif

@@ -1,67 +1,104 @@
-//
-// Created by dingjing on 1/31/23.
-//
+#ifndef CMUS_PLAYER_H
+#define CMUS_PLAYER_H
 
-#ifndef GRACEFUL_MUSIC_PLAYER_H
-#define GRACEFUL_MUSIC_PLAYER_H
+#include "locking.h"
+#include "track_info.h"
 
-#include "track-info.h"
+#include <pthread.h>
 
-typedef enum _PlayerStatus          PlayerStatus;
-typedef enum _ReplayGain            ReplayGain;
-typedef struct _PlayerInfo          PlayerInfo;
-
-enum
-{
-    PLAYER_ERROR_SUCCESS,           // 无错误
-    PLAYER_ERROR_ERRNO,             // 系统错误
-    PLAYER_ERROR_NOT_SUPPORTED      // 不支持
+enum {
+	/* no error */
+	PLAYER_ERROR_SUCCESS,
+	/* system error (error code in errno) */
+	PLAYER_ERROR_ERRNO,
+	/* function not supported */
+	PLAYER_ERROR_NOT_SUPPORTED
 };
 
-enum _PlayerStatus
-{
-    PLAYER_STATUS_STOPPED,
-    PLAYER_STATUS_PLAYING,
-    PLAYER_STATUS_PAUSED,
-    NR_PLAYER_STATUS
+extern const char * const player_status_names[];
+enum player_status {
+	PLAYER_STATUS_STOPPED,
+	PLAYER_STATUS_PLAYING,
+	PLAYER_STATUS_PAUSED,
+	NR_PLAYER_STATUS
 };
 
-enum _ReplayGain
-{
-    RG_DISABLED,
-    RG_TRACK,
-    RG_ALBUM,
-    RG_TRACK_PREFERRED,
-    RG_ALBUM_PREFERRED,
-    RG_SMART
+enum replaygain {
+	RG_DISABLED,
+	RG_TRACK,
+	RG_ALBUM,
+	RG_TRACK_PREFERRED,
+	RG_ALBUM_PREFERRED,
+	RG_SMART
 };
 
-struct _PlayerInfo
-{
-    TrackInfo*                      ti;
-    PlayerStatus                    status;
+struct player_info {
+	/* current track */
+	struct track_info *ti;
 
-    int                             pos;
-    int                             currentBitrate;
+	/* status */
+	enum player_status status;
+	int pos;
+	int current_bitrate;
 
-    int                             bufferFill;
-    int                             bufferSize;
+	int buffer_fill;
+	int buffer_size;
 
-    char*                           errorMsg;
+	/* display this if not NULL */
+	char *error_msg;
 
-    unsigned int                    fileChanged : 1;
-    unsigned int                    metaDataChanged : 1;
-    unsigned int                    statusChanged : 1;
-    unsigned int                    positionChanged : 1;
-    unsigned int                    bufferFillChanged : 1;
+	unsigned int file_changed : 1;
+	unsigned int metadata_changed : 1;
+	unsigned int status_changed : 1;
+	unsigned int position_changed : 1;
+	unsigned int buffer_fill_changed : 1;
 };
 
+extern char player_metadata[255 * 16 + 1];
+extern struct player_info player_info;
+extern int player_cont;
+extern int player_cont_album;
+extern int player_repeat_current;
+extern enum replaygain replaygain;
+extern int replaygain_limit;
+extern double replaygain_preamp;
+extern int soft_vol;
+extern int soft_vol_l;
+extern int soft_vol_r;
 
 void player_init(void);
 void player_exit(void);
 
-void player_set_file    (TrackInfo* ti);
-void player_play_file   (TrackInfo* ti);
+/* set current file */
+void player_set_file(struct track_info *ti);
 
+/* set current file and start playing */
+void player_play_file(struct track_info *ti);
 
-#endif //GRACEFUL_MUSIC_PLAYER_H
+/* update track info */
+void player_file_changed(struct track_info *ti);
+
+void player_play(void);
+void player_stop(void);
+void player_pause(void);
+void player_pause_playback(void);
+void player_seek(double offset, int relative, int start_playing);
+void player_set_op(const char *name);
+void player_set_buffer_chunks(unsigned int nr_chunks);
+int player_get_buffer_chunks(void);
+void player_info_snapshot(void);
+
+void player_set_soft_volume(int l, int r);
+void player_set_soft_vol(int soft);
+void player_set_rg(enum replaygain rg);
+void player_set_rg_limit(int limit);
+void player_set_rg_preamp(double db);
+
+#define VF_RELATIVE	0x01
+#define VF_PERCENTAGE	0x02
+int player_set_vol(int l, int lf, int r, int rf);
+
+void player_metadata_lock(void);
+void player_metadata_unlock(void);
+
+#endif

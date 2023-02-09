@@ -11,7 +11,9 @@ set(PROJECT_VERSION_PATCH 0)
 add_definitions(-w -g
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
-        -D PACKAGE_VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\"
+        -D VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\"
+#        -D DATADIR \\"/usr/share\\"
+#        -D LIBDIR \\"/usr/lib\\"
         )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -61,4 +63,4 @@ include_directories(${GLIB_INCLUDE_DIRS})
 include_directories(${GIO_UNIX_INCLUDE_DIRS})
 
 add_subdirectory(app)
-add_subdirectory(demo)
+#add_subdirectory(demo)
