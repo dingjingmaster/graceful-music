@@ -1,6 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 #include <glib.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,12 +81,20 @@ extern "C" {
     exit(1);                                                \
 }
 
+
 #define LOG_RAW(level, file, line, func, msg) \
     g_log_structured(G_LOG_DOMAIN, level,                   \
                     "FILE", file,                           \
                     "LINE", line,                           \
                     "FUNC", func,                           \
                     "MESSAGE", msg)
+
+
+#define DIE_BEFORE_LOG_INIT(...) \
+{                                                           \
+    fprintf (stderr, __VA_ARGS__);                          \
+    exit(-1);                                               \
+}
 
 
 GLogWriterOutput log_handler(GLogLevelFlags level, const GLogField *fields, gsize nFields, gpointer udata);

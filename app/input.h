@@ -1,8 +1,12 @@
-#ifndef CMUS_INPUT_H
-#define CMUS_INPUT_H
+//
+// Created by dingjing on 2/10/23.
+//
 
-#include "key-value.h"
+#ifndef GRACEFUL_MUSIC_INPUT_H
+#define GRACEFUL_MUSIC_INPUT_H
+
 #include "sf.h"
+#include "key-value.h"
 #include "channel-map.h"
 
 struct input_plugin;
@@ -65,4 +69,5 @@ char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg);
 char **ip_get_supported_extensions(void);
 void ip_dump_plugins(void);
 
-#endif
+
+#endif //GRACEFUL_MUSIC_INPUT_H
