@@ -304,7 +304,7 @@ static int http_parse_response(char *str, struct http_get *hg)
 	 * no carriage returns
 	 * no empty lines
 	 */
-	GROWING_KEYVALS(h);
+    GROWING_KEY_VALUES(h);
 	char *end;
 
 	if (strncmp(str, "HTTP/", 5) == 0) {
@@ -347,8 +347,8 @@ static int http_parse_response(char *str, struct http_get *hg)
 		if (ptr == NULL || ptr > end) {
 			free(hg->reason);
 			hg->reason = NULL;
-			keyvals_terminate(&h);
-			keyvals_free(h.keyvals);
+			key_value_terminate(&h);
+			key_value_free(h.keyValues);
 			return -2;
 		}
 
@@ -356,15 +356,15 @@ static int http_parse_response(char *str, struct http_get *hg)
 		while (*ptr == ' ')
 			ptr++;
 
-		keyvals_add(&h, str, xstrndup(ptr, end - ptr));
+		key_value_add(&h, str, xstrndup(ptr, end - ptr));
 		str = end + 1;
 	}
-	keyvals_terminate(&h);
-	hg->headers = h.keyvals;
+	key_value_terminate(&h);
+	hg->headers = h.keyValues;
 	return 0;
 }
 
-int http_get(struct http_get *hg, struct keyval *headers, int timeout_ms)
+int http_get(struct http_get *hg, KeyValue* headers, int timeout_ms)
 {
 	GBUF(buf);
 	int i, rc, save;
@@ -375,7 +375,7 @@ int http_get(struct http_get *hg, struct keyval *headers, int timeout_ms)
 	for (i = 0; headers[i].key; i++) {
 		gbuf_add_str(&buf, headers[i].key);
 		gbuf_add_str(&buf, ": ");
-		gbuf_add_str(&buf, headers[i].val);
+		gbuf_add_str(&buf, headers[i].value);
 		gbuf_add_str(&buf, "\r\n");
 	}
 	gbuf_add_str(&buf, "\r\n");
@@ -429,7 +429,7 @@ void http_get_free(struct http_get *hg)
 		free(hg->proxy);
 	}
 	if (hg->headers)
-		keyvals_free(hg->headers);
+		key_value_free(hg->headers);
 	free(hg->reason);
 }
 

@@ -885,7 +885,7 @@ static const char *str_val(const char *key, struct track_info *ti, char **need_f
 	} else if (strcmp(key, "codec_profile") == 0) {
 		val = ti->codec_profile;
 	} else {
-		val = keyvals_get_val(ti->comments, key);
+		val = key_value_get_value (ti->comments, key);
 	}
 	return val;
 }

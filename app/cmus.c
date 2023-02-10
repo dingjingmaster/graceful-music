@@ -201,7 +201,7 @@ static int save_ext_playlist_cb(void *data, struct track_info *ti)
 	for (i = 0; ti->comments[i].key; i++)
 		gbuf_addf(&buf, "tag %s %s\n",
 				ti->comments[i].key,
-				escape(ti->comments[i].val));
+				escape(ti->comments[i].value));
 
 	rc = write_all(fd, buf.buffer, buf.len);
 	gbuf_free(&buf);

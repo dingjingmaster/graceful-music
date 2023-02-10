@@ -179,13 +179,13 @@ static void keyvals_add_basic_auth(struct growing_keyvals *c,
 	} else {
 		snprintf(buf, sizeof(buf), "Basic %s", encoded);
 		free(encoded);
-		keyvals_add(c, header, xstrdup(buf));
+        key_value_add (c, header, xstrdup(buf));
 	}
 }
 
 static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 {
-	GROWING_KEYVALS(h);
+    GROWING_KEY_VALUES(h);
 	int i, rc;
 	const char *val;
 	char *redirloc;
@@ -203,17 +203,17 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 	if (http_open(hg, http_connection_timeout))
 		return -IP_ERROR_ERRNO;
 
-	keyvals_add(&h, "Host", xstrdup(hg->uri.host));
+	key_value_add(&h, "Host", xstrdup(hg->uri.host));
 	if (hg->proxy && hg->proxy->user && hg->proxy->pass)
 		keyvals_add_basic_auth(&h, hg->proxy->user, hg->proxy->pass, "Proxy-Authorization");
-	keyvals_add(&h, "User-Agent", xstrdup("cmus/" VERSION));
-	keyvals_add(&h, "Icy-MetaData", xstrdup("1"));
+	key_value_add(&h, "User-Agent", xstrdup("cmus/" VERSION));
+	key_value_add(&h, "Icy-MetaData", xstrdup("1"));
 	if (hg->uri.user && hg->uri.pass)
 		keyvals_add_basic_auth(&h, hg->uri.user, hg->uri.pass, "Authorization");
-	keyvals_terminate(&h);
+	key_value_terminate(&h);
 
-	rc = http_get(hg, h.keyvals, http_read_timeout);
-	keyvals_free(h.keyvals);
+	rc = http_get(hg, h.keyValues, http_read_timeout);
+	key_value_free(h.keyValues);
 	switch (rc) {
 	case -1:
 		return -IP_ERROR_ERRNO;
@@ -221,9 +221,9 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 		return -IP_ERROR_HTTP_RESPONSE;
 	}
 
-	d_print("HTTP response: %d %s\n", hg->code, hg->reason);
+	DEBUG ("HTTP response: %d %s\n", hg->code, hg->reason);
 	for (i = 0; hg->headers[i].key != NULL; i++)
-		d_print("  %s: %s\n", hg->headers[i].key, hg->headers[i].val);
+		DEBUG ("  %s: %s\n", hg->headers[i].key, hg->headers[i].value);
 
 	switch (hg->code) {
 	case 200: /* OK */
@@ -236,7 +236,7 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 	case 302: /* Found */
 	case 303: /* See Other */
 	case 307: /* Temporary Redirect */
-		val = keyvals_get_val(hg->headers, "location");
+		val = key_value_get_value(hg->headers, "location");
 		if (!val)
 			return -IP_ERROR_HTTP_RESPONSE;
 
@@ -261,7 +261,7 @@ static int setup_remote(struct input_plugin *ip, const struct keyval *headers, i
 {
 	const char *val;
 
-	val = keyvals_get_val(headers, "Content-Type");
+	val = key_value_get_value (headers, "Content-Type");
 	if (val) {
 		d_print("Content-Type: %s\n", val);
 		ip->ops = get_ops_by_mime_type(val);
@@ -285,7 +285,7 @@ static int setup_remote(struct input_plugin *ip, const struct keyval *headers, i
 	ip->data.fd = sock;
 	ip->data.metadata = xnew(char, 16 * 255 + 1);
 
-	val = keyvals_get_val(headers, "icy-metaint");
+	val = key_value_get_value (headers, "icy-metaint");
 	if (val) {
 		long int lint;
 
@@ -295,15 +295,15 @@ static int setup_remote(struct input_plugin *ip, const struct keyval *headers, i
 		}
 	}
 
-	val = keyvals_get_val(headers, "icy-name");
+	val = key_value_get_value (headers, "icy-name");
 	if (val)
 		ip->data.icy_name = to_utf8(val, icecast_default_charset);
 
-	val = keyvals_get_val(headers, "icy-genre");
+	val = key_value_get_value (headers, "icy-genre");
 	if (val)
 		ip->data.icy_genre = to_utf8(val, icecast_default_charset);
 
-	val = keyvals_get_val(headers, "icy-url");
+	val = key_value_get_value (headers, "icy-url");
 	if (val)
 		ip->data.icy_url = to_utf8(val, icecast_default_charset);
 
@@ -375,7 +375,7 @@ static int open_remote(struct input_plugin *ip)
 		return rc;
 	}
 
-	val = keyvals_get_val(hg.headers, "Content-Type");
+	val = key_value_get_value (hg.headers, "Content-Type");
 	if (val) {
 		int i;
 
@@ -722,7 +722,7 @@ int ip_seek(struct input_plugin *ip, double offset)
 	return rc;
 }
 
-int ip_read_comments(struct input_plugin *ip, struct keyval **comments)
+int ip_read_comments(struct input_plugin *ip, KeyValue** comments)
 {
 	struct keyval *kv = NULL;
 	int rc;
@@ -730,25 +730,25 @@ int ip_read_comments(struct input_plugin *ip, struct keyval **comments)
 	rc = ip->ops->read_comments(&ip->data, &kv);
 
 	if (ip->data.remote) {
-		GROWING_KEYVALS(c);
+        GROWING_KEY_VALUES(c);
 
 		if (kv) {
-			keyvals_init(&c, kv);
-			keyvals_free(kv);
+			key_value_init(&c, kv);
+			key_value_free(kv);
 		}
 
-		if (ip->data.icy_name && !keyvals_get_val_growing(&c, "title"))
-			keyvals_add(&c, "title", xstrdup(ip->data.icy_name));
+		if (ip->data.icy_name && !key_value_get_val_growing(&c, "title"))
+			key_value_add(&c, "title", xstrdup(ip->data.icy_name));
 
-		if (ip->data.icy_genre && !keyvals_get_val_growing(&c, "genre"))
-			keyvals_add(&c, "genre", xstrdup(ip->data.icy_genre));
+		if (ip->data.icy_genre && !key_value_get_val_growing(&c, "genre"))
+			key_value_add(&c, "genre", xstrdup(ip->data.icy_genre));
 
-		if (ip->data.icy_url && !keyvals_get_val_growing(&c, "comment"))
-			keyvals_add(&c, "comment", xstrdup(ip->data.icy_url));
+		if (ip->data.icy_url && !key_value_get_val_growing(&c, "comment"))
+			key_value_add(&c, "comment", xstrdup(ip->data.icy_url));
 
-		keyvals_terminate(&c);
+		key_value_terminate(&c);
 
-		kv = c.keyvals;
+		kv = c.keyValues;
 	}
 
 	*comments = kv;

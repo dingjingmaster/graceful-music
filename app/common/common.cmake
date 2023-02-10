@@ -14,11 +14,11 @@ file(GLOB COMMON_SRC
         ${CMAKE_SOURCE_DIR}/app/common/utils.h
         ${CMAKE_SOURCE_DIR}/app/common/utils.c
 
-        ${CMAKE_SOURCE_DIR}/app/common/keyval.h
-        ${CMAKE_SOURCE_DIR}/app/common/keyval.c
-
         ${CMAKE_SOURCE_DIR}/app/common/xmalloc.h
         ${CMAKE_SOURCE_DIR}/app/common/xmalloc.c
+
+        ${CMAKE_SOURCE_DIR}/app/common/key-value.h
+        ${CMAKE_SOURCE_DIR}/app/common/key-value.c
 
         ${CMAKE_SOURCE_DIR}/app/common/channelmap.h
         ${CMAKE_SOURCE_DIR}/app/common/channelmap.c

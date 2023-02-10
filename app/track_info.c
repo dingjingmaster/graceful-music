@@ -45,26 +45,26 @@ struct track_info *track_info_new(const char *filename)
 	return ti;
 }
 
-void track_info_set_comments(struct track_info *ti, struct keyval *comments) {
+void track_info_set_comments(struct track_info *ti, KeyValue* comments) {
 	long int r128_track_gain;
 	long int r128_album_gain;
 	long int output_gain;
 
 	ti->comments = comments;
-	ti->artist = keyvals_get_val(comments, "artist");
-	ti->album = keyvals_get_val(comments, "album");
-	ti->title = keyvals_get_val(comments, "title");
+	ti->artist = key_value_get_value (comments, "artist");
+	ti->album = key_value_get_value (comments, "album");
+	ti->title = key_value_get_value (comments, "title");
 	ti->tracknumber = comments_get_int(comments, "tracknumber");
 	ti->discnumber = comments_get_int(comments, "discnumber");
 	ti->date = comments_get_date(comments, "date");
 	ti->originaldate = comments_get_date(comments, "originaldate");
-	ti->genre = keyvals_get_val(comments, "genre");
-	ti->comment = keyvals_get_val(comments, "comment");
+	ti->genre = key_value_get_value (comments, "genre");
+	ti->comment = key_value_get_value (comments, "comment");
 	ti->albumartist = comments_get_albumartist(comments);
 	ti->artistsort = comments_get_artistsort(comments);
-	ti->albumsort = keyvals_get_val(comments, "albumsort");
+	ti->albumsort = key_value_get_value (comments, "albumsort");
 	ti->is_va_compilation = track_is_va_compilation(comments);
-	ti->media = keyvals_get_val(comments, "media");
+	ti->media = key_value_get_value (comments, "media");
 
 	int bpm = comments_get_int(comments, "bpm");
 	if (ti->bpm == 0 || ti->bpm == -1) {
@@ -118,7 +118,7 @@ void track_info_unref(struct track_info *ti)
 	uint32_t prev = atomic_fetch_sub_explicit(&priv->ref_count, 1,
 			memory_order_acq_rel);
 	if (prev == 1) {
-		keyvals_free(ti->comments);
+		key_value_free(ti->comments);
 		free(ti->filename);
 		free(ti->codec);
 		free(ti->codec_profile);

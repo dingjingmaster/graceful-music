@@ -31,7 +31,7 @@
 #include "gbuf.h"
 #include "ui_curses.h"
 #include "misc.h"
-#include "keyval.h"
+#include "key-value.h"
 #include "convert.h"
 #include "format_print.h"
 #include "log.h"
@@ -97,7 +97,7 @@ static int cmd_status(struct client *client)
 		gbuf_addf(&buf, "duration %d\n", ti->duration);
 		gbuf_addf(&buf, "position %d\n", player_info.pos);
 		for (i = 0; ti->comments[i].key; i++) {
-            gbuf_addf(&buf, "tag %s %s\n", ti->comments[i].key, escape(ti->comments[i].val));
+            gbuf_addf(&buf, "tag %s %s\n", ti->comments[i].key, escape(ti->comments[i].value));
         }
 	}
 

@@ -6,9 +6,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "key-value.h"
+
 struct track_info {
 	uint64_t uid;
-	struct keyval *comments;
+	KeyValue* comments;
 
 	// next track_info in the hash table (cache.c)
 	struct track_info *next;
@@ -109,7 +111,7 @@ typedef size_t sort_key_t;
 
 /* initializes only filename and ref */
 struct track_info *track_info_new(const char *filename);
-void track_info_set_comments(struct track_info *ti, struct keyval *comments);
+void track_info_set_comments(struct track_info *ti, KeyValue* comments);
 
 void track_info_ref(struct track_info *ti);
 void track_info_unref(struct track_info *ti);

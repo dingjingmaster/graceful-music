@@ -530,19 +530,19 @@ static void fill_track_fopts_track_info(struct track_info *info)
 	fopt_set_str(&track_fopts[TF_CODEC], info->codec);
 	fopt_set_str(&track_fopts[TF_CODEC_PROFILE], info->codec_profile);
 	fopt_set_str(&track_fopts[TF_PATHFILE], filename);
-	fopt_set_str(&track_fopts[TF_ARRANGER], keyvals_get_val(info->comments, "arranger"));
-	fopt_set_str(&track_fopts[TF_COMPOSER], keyvals_get_val(info->comments, "composer"));
-	fopt_set_str(&track_fopts[TF_CONDUCTOR], keyvals_get_val(info->comments, "conductor"));
-	fopt_set_str(&track_fopts[TF_LYRICIST], keyvals_get_val(info->comments, "lyricist"));
-	fopt_set_str(&track_fopts[TF_PERFORMER], keyvals_get_val(info->comments, "performer"));
-	fopt_set_str(&track_fopts[TF_REMIXER], keyvals_get_val(info->comments, "remixer"));
-	fopt_set_str(&track_fopts[TF_LABEL], keyvals_get_val(info->comments, "label"));
-	fopt_set_str(&track_fopts[TF_PUBLISHER], keyvals_get_val(info->comments, "publisher"));
-	fopt_set_str(&track_fopts[TF_WORK], keyvals_get_val(info->comments, "work"));
-	fopt_set_str(&track_fopts[TF_OPUS], keyvals_get_val(info->comments, "opus"));
-	fopt_set_str(&track_fopts[TF_PARTNUMBER], keyvals_get_val(info->comments, "partnumber"));
-	fopt_set_str(&track_fopts[TF_PART], keyvals_get_val(info->comments, "part"));
-	fopt_set_str(&track_fopts[TF_SUBTITLE], keyvals_get_val(info->comments, "subtitle"));
+	fopt_set_str(&track_fopts[TF_ARRANGER], key_value_get_value (info->comments, "arranger"));
+	fopt_set_str(&track_fopts[TF_COMPOSER], key_value_get_value (info->comments, "composer"));
+	fopt_set_str(&track_fopts[TF_CONDUCTOR], key_value_get_value (info->comments, "conductor"));
+	fopt_set_str(&track_fopts[TF_LYRICIST], key_value_get_value (info->comments, "lyricist"));
+	fopt_set_str(&track_fopts[TF_PERFORMER], key_value_get_value (info->comments, "performer"));
+	fopt_set_str(&track_fopts[TF_REMIXER], key_value_get_value (info->comments, "remixer"));
+	fopt_set_str(&track_fopts[TF_LABEL], key_value_get_value (info->comments, "label"));
+	fopt_set_str(&track_fopts[TF_PUBLISHER], key_value_get_value (info->comments, "publisher"));
+	fopt_set_str(&track_fopts[TF_WORK], key_value_get_value (info->comments, "work"));
+	fopt_set_str(&track_fopts[TF_OPUS], key_value_get_value (info->comments, "opus"));
+	fopt_set_str(&track_fopts[TF_PARTNUMBER], key_value_get_value (info->comments, "partnumber"));
+	fopt_set_str(&track_fopts[TF_PART], key_value_get_value (info->comments, "part"));
+	fopt_set_str(&track_fopts[TF_SUBTITLE], key_value_get_value (info->comments, "subtitle"));
 	fopt_set_str(&track_fopts[TF_MEDIA], info->media);
 	fopt_set_int(&track_fopts[TF_VA], 0, !track_is_compilation(info->comments));
 	if (is_http_url(info->filename)) {
@@ -1730,7 +1730,7 @@ static int fill_status_program_track_info_args(char **argv, int i, struct track_
 				 */
 				val = stream_title;
 			else
-				val = keyvals_get_val(ti->comments, key);
+				val = key_value_get_value (ti->comments, key);
 
 			if (val) {
 				argv[i++] = xstrdup(key);

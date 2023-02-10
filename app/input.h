@@ -1,7 +1,7 @@
 #ifndef CMUS_INPUT_H
 #define CMUS_INPUT_H
 
-#include "keyval.h"
+#include "key-value.h"
 #include "sf.h"
 #include "channelmap.h"
 
@@ -45,7 +45,7 @@ int ip_seek(struct input_plugin *ip, double offset);
 /*
  * errors: IP_ERROR_{ERRNO}
  */
-int ip_read_comments(struct input_plugin *ip, struct keyval **comments);
+int ip_read_comments(struct input_plugin *ip, KeyValue** comments);
 
 int ip_duration(struct input_plugin *ip);
 int ip_bitrate(struct input_plugin *ip);

@@ -14,23 +14,23 @@ static int is_various_artists(const char *a)
 	       strcasecmp(a, "V/A")             == 0;
 }
 
-int track_is_compilation(const struct keyval *comments)
+int track_is_compilation(const KeyValue* comments)
 {
 	const char *c, *a, *aa;
 
-	c = keyvals_get_val(comments, "compilation");
+	c = key_value_get_value (comments, "compilation");
 	if (c && is_freeform_true(c))
 		return 1;
 
-	c = keyvals_get_val(comments, "partofacompilation");
+	c = key_value_get_value (comments, "partofacompilation");
 	if (c && is_freeform_true(c))
 		return 1;
 
-	aa = keyvals_get_val(comments, "albumartist");
+	aa = key_value_get_value (comments, "albumartist");
 	if (aa && is_various_artists(aa))
 		return 1;
 
-	a = keyvals_get_val(comments, "artist");
+	a = key_value_get_value (comments, "artist");
 	if (a && is_various_artists(a))
 		return 1;
 
@@ -40,50 +40,50 @@ int track_is_compilation(const struct keyval *comments)
 	return 0;
 }
 
-int track_is_va_compilation(const struct keyval *comments)
+int track_is_va_compilation(const KeyValue* comments)
 {
 	const char *c, *a, *aa;
 
-	aa = keyvals_get_val(comments, "albumartist");
+	aa = key_value_get_value (comments, "albumartist");
 	if (aa)
 		return is_various_artists(aa);
 
-	a = keyvals_get_val(comments, "artist");
+	a = key_value_get_value (comments, "artist");
 	if (a && is_various_artists(a))
 		return 1;
 
-	c = keyvals_get_val(comments, "compilation");
+	c = key_value_get_value (comments, "compilation");
 	if (c && is_freeform_true(c))
 		return 1;
 
-	c = keyvals_get_val(comments, "partofacompilation");
+	c = key_value_get_value (comments, "partofacompilation");
 	if (c && is_freeform_true(c))
 		return 1;
 
 	return 0;
 }
 
-const char *comments_get_albumartist(const struct keyval *comments)
+const char *comments_get_albumartist(const KeyValue* comments)
 {
-	const char *val = keyvals_get_val(comments, "albumartist");
+	const char *val = key_value_get_value (comments, "albumartist");
 
 	if (!val || strcmp(val, "") == 0)
-		val = keyvals_get_val(comments, "artist");
+		val = key_value_get_value (comments, "artist");
 
 	return val;
 }
 
-const char *comments_get_artistsort(const struct keyval *comments)
+const char *comments_get_artistsort(const KeyValue* comments)
 {
 	const char *val;
 
 	if (track_is_va_compilation(comments))
 		return NULL;
 
-	val = keyvals_get_val(comments, "albumartistsort");
+	val = key_value_get_value (comments, "albumartistsort");
 	if (!track_is_compilation(comments)) {
 		if (!val || strcmp(val, "") == 0)
-			val = keyvals_get_val(comments, "artistsort");
+			val = key_value_get_value (comments, "artistsort");
 	}
 
 	if (!val || strcmp(val, "") == 0)
@@ -92,12 +92,12 @@ const char *comments_get_artistsort(const struct keyval *comments)
 	return val;
 }
 
-int comments_get_int(const struct keyval *comments, const char *key)
+int comments_get_int(const KeyValue* comments, const char *key)
 {
 	const char *val;
 	long int ival;
 
-	val = keyvals_get_val(comments, key);
+	val = key_value_get_value (comments, key);
 	if (val == NULL)
 		return -1;
 	while (*val && !(*val >= '0' && *val <= '9'))
@@ -107,11 +107,11 @@ int comments_get_int(const struct keyval *comments, const char *key)
 	return ival;
 }
 
-int comments_get_signed_int(const struct keyval *comments, const char *key, long int *ival)
+int comments_get_signed_int(const KeyValue* comments, const char *key, long int *ival)
 {
 	const char *val;
 
-	val = keyvals_get_val(comments, key);
+	val = key_value_get_value (comments, key);
 	if (val == NULL)
 		return -1;
 	while (*val && !(*val == '+' || *val == '-' || (*val >= '0' && *val <= '9')))
@@ -119,13 +119,13 @@ int comments_get_signed_int(const struct keyval *comments, const char *key, long
 	return str_to_int(val, ival);
 }
 
-double comments_get_double(const struct keyval *comments, const char *key)
+double comments_get_double(const KeyValue* comments, const char *key)
 {
 	const char *val;
 	char *end;
 	double d;
 
-	val = keyvals_get_val(comments, key);
+	val = key_value_get_value (comments, key);
 	if (!val || strcmp(val, "") == 0)
 		goto error;
 
@@ -141,14 +141,14 @@ error:
 
 /* Return date as an integer in the form YYYYMMDD, for sorting purposes.
  * This function is not year 10000 compliant. */
-int comments_get_date(const struct keyval *comments, const char *key)
+int comments_get_date(const KeyValue* comments, const char *key)
 {
 	const char *val;
 	char *endptr;
 	int year, month, day;
 	long int ival;
 
-	val = keyvals_get_val(comments, key);
+	val = key_value_get_value (comments, key);
 	if (val == NULL)
 		return -1;
 
@@ -240,7 +240,7 @@ static const char *fix_key(const char *key)
 	return NULL;
 }
 
-int comments_add(struct growing_keyvals *c, const char *key, char *val)
+int comments_add(GrowingKeyValues* c, const char *key, char *val)
 {
 	if (!strcasecmp(key, "songwriter")) {
 		int r = comments_add_const(c, "lyricist", val);
@@ -260,16 +260,16 @@ int comments_add(struct growing_keyvals *c, const char *key, char *val)
 	}
 
 	/* don't add duplicates */
-	if (keyvals_get_val_growing(c, key)) {
+	if (key_value_get_val_growing(c, key)) {
 		free(val);
 		return 0;
 	}
 
-	keyvals_add(c, key, val);
+    key_value_add (c, key, val);
 	return 1;
 }
 
-int comments_add_const(struct growing_keyvals *c, const char *key, const char *val)
+int comments_add_const(GrowingKeyValues* c, const char *key, const char *val)
 {
 	return comments_add(c, key, xstrdup(val));
 }

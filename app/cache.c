@@ -108,7 +108,7 @@ static struct track_info *cache_entry_to_ti(struct cache_entry *e)
 {
 	const char *strings = e->strings;
 	struct track_info *ti = track_info_new(strings);
-	struct keyval *kv;
+	KeyValue* kv;
 	int str_size = e->size - sizeof(*e);
 	int pos, i, count;
 
@@ -132,7 +132,7 @@ static struct track_info *cache_entry_to_ti(struct cache_entry *e)
 	pos += strlen(strings + pos) + 1;
 	ti->codec_profile = strings[pos] ? xstrdup(strings + pos) : NULL;
 	pos += strlen(strings + pos) + 1;
-	kv = xnew(struct keyval, count + 1);
+	kv = xnew (KeyValue, count + 1);
 	for (i = 0; i < count; i++) {
 		int size;
 
@@ -141,11 +141,11 @@ static struct track_info *cache_entry_to_ti(struct cache_entry *e)
 		pos += size;
 
 		size = strlen(strings + pos) + 1;
-		kv[i].val = xstrdup(strings + pos);
+		kv[i].value = xstrdup(strings + pos);
 		pos += size;
 	}
 	kv[i].key = NULL;
-	kv[i].val = NULL;
+	kv[i].value = NULL;
 	track_info_set_comments(ti, kv);
 	return ti;
 }
@@ -301,7 +301,7 @@ static void flush_buffer(int fd, struct gbuf *buf)
 
 static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned int *offsetp)
 {
-	const struct keyval *kv = ti->comments;
+	const KeyValue* kv = ti->comments;
 	unsigned int offset = *offsetp;
 	unsigned int pad;
 	struct cache_entry e;
@@ -330,7 +330,7 @@ static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned i
 		}
 		len[count] = strlen(kv[i].key) + 1;
 		e.size += len[count++];
-		len[count] = strlen(kv[i].val) + 1;
+		len[count] = strlen(kv[i].value) + 1;
 		e.size += len[count++];
 	}
 
@@ -347,7 +347,7 @@ static void write_ti(int fd, struct gbuf *buf, struct track_info *ti, unsigned i
 	gbuf_add_bytes(buf, ti->codec_profile ? ti->codec_profile : "", len[count++]);
 	for (i = 0; kv[i].key; i++) {
 		gbuf_add_bytes(buf, kv[i].key, len[count++]);
-		gbuf_add_bytes(buf, kv[i].val, len[count++]);
+		gbuf_add_bytes(buf, kv[i].value, len[count++]);
 	}
 
 	free(len);
@@ -430,12 +430,12 @@ struct track_info *cache_get_ti(const char *filename, int force)
 	}
 	if (!ti) {
 		if (skip_track_info && !reload && !force) {
-			struct growing_keyvals c = {NULL, 0, 0};
+			GrowingKeyValues c = {NULL, 0, 0};
 
 			ti = track_info_new(filename);
 
-			keyvals_terminate(&c);
-			track_info_set_comments(ti, c.keyvals);
+			key_value_terminate(&c);
+			track_info_set_comments(ti, c.keyValues);
 
 			ti->duration = 0;
 		} else {

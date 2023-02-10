@@ -1,7 +1,7 @@
 #ifndef CMUS_HTTP_H
 #define CMUS_HTTP_H
 
-#include "keyval.h"
+#include "key-value.h"
 
 #include <stddef.h> /* size_t */
 
@@ -13,7 +13,8 @@
  * 5xx indicates an error on the server's part
  */
 
-struct http_uri {
+struct http_uri
+{
 	char *uri;
 	char *user;
 	char *pass;
@@ -26,7 +27,7 @@ struct http_get {
 	struct http_uri uri;
 	struct http_uri *proxy;
 	int fd;
-	struct keyval *headers;
+	KeyValue* headers;
 	char *reason;
 	int code;
 };
@@ -43,7 +44,7 @@ int http_open(struct http_get *hg, int timeout_ms);
  *          -1 check errno
  *          -2 parse error
  */
-int http_get(struct http_get *hg, struct keyval *headers, int timeout_ms);
+int http_get(struct http_get *hg, KeyValue* headers, int timeout_ms);
 void http_get_free(struct http_get *hg);
 
 char *http_read_body(int fd, size_t *size, int timeout_ms);

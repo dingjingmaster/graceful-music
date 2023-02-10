@@ -428,7 +428,7 @@ static inline void metadata_changed(void)
 	rc = ip_read_comments(ip, &comments);
 	if (!rc) {
 		if (player_info_priv.ti->comments)
-			keyvals_free(player_info_priv.ti->comments);
+			key_value_free(player_info_priv.ti->comments);
 		track_info_set_comments(player_info_priv.ti, comments);
 	}
 

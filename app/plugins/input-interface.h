@@ -6,7 +6,7 @@
 #define GRACEFUL_MUSIC_INPUT_INTERFACE_H
 
 #include "sf.h"
-#include "keyval.h"
+#include "key-value.h"
 #include "channelmap.h"
 
 #ifndef __GNUC__
