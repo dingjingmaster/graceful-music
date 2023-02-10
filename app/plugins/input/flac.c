@@ -59,11 +59,12 @@ struct _FlacPrivate
 
 static T(ReadStatus) read_cb (const Dec* dec, unsigned char* buf, size_t* size, void* data)
 {
+    (void) dec;
     InputPluginData* ipData = data;
-    FlacPrivate* priv = ipData->private;
+    FlacPrivate* p = ipData->private;
     int rc;
 
-    if (priv->pos == priv->len) {
+    if (p->pos == p->len) {
         *size = 0;
         return E(READ_STATUS_END_OF_STREAM);
     }
@@ -84,7 +85,7 @@ static T(ReadStatus) read_cb (const Dec* dec, unsigned char* buf, size_t* size, 
         return E(READ_STATUS_ABORT);
     }
 
-    priv->pos += rc;
+    p->pos += rc;
     *size = rc;
     if (rc == 0) {
         /* should not happen */
@@ -96,6 +97,7 @@ static T(ReadStatus) read_cb (const Dec* dec, unsigned char* buf, size_t* size, 
 
 static T(SeekStatus) seek_cb (const Dec* dec, uint64_t offset, void* data)
 {
+    (void) dec;
     InputPluginData* ipData = data;
     FlacPrivate* p = ipData->private;
     off_t off;
@@ -104,7 +106,7 @@ static T(SeekStatus) seek_cb (const Dec* dec, uint64_t offset, void* data)
         return E(SEEK_STATUS_ERROR);
     }
 
-    off = lseek (ipData->fd, offset, SEEK_SET);
+    off = lseek (ipData->fd, (__off_t) offset, SEEK_SET);
     if (off == -1) {
         return E(SEEK_STATUS_ERROR);
     }
@@ -116,6 +118,7 @@ static T(SeekStatus) seek_cb (const Dec* dec, uint64_t offset, void* data)
 
 static T(TellStatus) tell_cb (const Dec* dec, uint64_t* offset, void* data)
 {
+    (void) dec;
     InputPluginData* ipData = data;
     FlacPrivate* p = ipData->private;
 
@@ -125,6 +128,7 @@ static T(TellStatus) tell_cb (const Dec* dec, uint64_t* offset, void* data)
 
 static T(LengthStatus) length_cb (const Dec* dec, uint64_t* len, void* data)
 {
+    (void) dec;
     InputPluginData* ipData = data;
     FlacPrivate* p = ipData->private;
 
@@ -138,6 +142,7 @@ static T(LengthStatus) length_cb (const Dec* dec, uint64_t* len, void* data)
 
 static int eof_cb (const Dec *dec, void *data)
 {
+    (void) dec;
     InputPluginData* ipData = data;
     FlacPrivate* p = ipData->private;
 
@@ -156,31 +161,34 @@ static int eof_cb (const Dec *dec, void *data)
 
 static FLAC__StreamDecoderWriteStatus write_cb (const Dec* dec, const FLAC__Frame* frame, const int32_t* const* buf, void* data)
 {
+    (void) dec;
     InputPluginData* ip_data = data;
-    FlacPrivate* priv = ip_data->private;
-    int frames, bytes, size, channels, bits, depth;
-    int ch, nch, i = 0;
+    FlacPrivate* p = ip_data->private;
+    uint frames, bytes, size, channels, bits, depth;
+    int ch, i = 0;
+    uint nch;
     char *dest; int32_t src;
 
     frames = frame->header.blocksize;
     channels = sf_get_channels(ip_data->sf);
     bits = sf_get_bits(ip_data->sf);
     bytes = frames * bits / 8 * channels;
-    size = priv->bufSize;
+    size = p->bufSize;
 
-    if (size - priv->bufWritePos < bytes) {
+    if (size - p->bufWritePos < bytes) {
         if (size < bytes)
             size = bytes;
         size *= 2;
-        priv->buf = xrenew(char, priv->buf, size);
-        priv->bufSize = size;
+        p->buf = xrenew(char, p->buf, size);
+        p->bufSize = size;
     }
 
     depth = frame->header.bits_per_sample;
-    if (!depth)
-        depth = priv->bps;
+    if (!depth) {
+        depth = p->bps;
+    }
     nch = frame->header.channels;
-    dest = priv->buf + priv->bufWritePos;
+    dest = p->buf + p->bufWritePos;
     for (i = 0; i < frames; i++) {
         for (ch = 0; ch < channels; ch++) {
             src = LE32(buf[ch % nch][i] << (bits - depth));
@@ -189,7 +197,8 @@ static FLAC__StreamDecoderWriteStatus write_cb (const Dec* dec, const FLAC__Fram
         }
     }
 
-    priv->bufWritePos += bytes;
+    p->bufWritePos += bytes;
+
     return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
 
@@ -201,78 +210,81 @@ static FLAC__StreamDecoderWriteStatus write_cb (const Dec* dec, const FLAC__Fram
  */
 static void metadata_cb (const Dec* dec, const FLAC__StreamMetadata* metadata, void* data)
 {
+    (void) dec;
     InputPluginData* ip_data = data;
-    FlacPrivate* priv = ip_data->private;
+    FlacPrivate* p = ip_data->private;
 
     switch (metadata->type) {
-        case FLAC__METADATA_TYPE_STREAMINFO:
-        {
+        case FLAC__METADATA_TYPE_STREAMINFO: {
             const FLAC__StreamMetadata_StreamInfo *si = &metadata->data.stream_info;
             int bits = 0;
 
             if (si->bits_per_sample >= 4 && si->bits_per_sample <= 32) {
-                bits = priv->bps = si->bits_per_sample;
+                bits = p->bps = (int) si->bits_per_sample;
                 bits = 8 * ((bits + 7) / 8);
             }
 
-            ip_data->sf = sf_rate(si->sample_rate) |
-                          sf_bits(bits) |
-                          sf_signed(1) |
-                          sf_channels(si->channels);
+            ip_data->sf = sf_rate(si->sample_rate) | sf_bits(bits) | sf_signed(1) | sf_channels(si->channels);
             if (!ip_data->remote && si->total_samples) {
-                priv->duration = (double) si->total_samples / si->sample_rate;
-                if (priv->duration >= 1 && priv->len >= 1)
-                    priv->bitrate = priv->len * 8 / priv->duration;
+                p->duration = (double) si->total_samples / si->sample_rate;
+                if (p->duration >= 1 && p->len >= 1) {
+                    p->bitrate = p->len * 8 / p->duration;
+                }
             }
-        }
             break;
-        case FLAC__METADATA_TYPE_VORBIS_COMMENT:
+        }
+        case FLAC__METADATA_TYPE_VORBIS_COMMENT: {
             DEBUG ("VORBISCOMMENT");
-            if (priv->comments) {
-                DEBUG ("Ignoring\n");
+            if (p->comments) {
+                DEBUG ("Ignoring");
             } else {
                 GROWING_KEY_VALUES(c);
-                int i, nr;
+                unsigned int nr;
 
                 nr = metadata->data.vorbis_comment.num_comments;
-                for (i = 0; i < nr; i++) {
-                    const char *str = (const char *)metadata->data.vorbis_comment.comments[i].entry;
+                for (int i = 0; i < nr; i++) {
+                    const char *str = (const char *) metadata->data.vorbis_comment.comments[i].entry;
                     char *key, *val;
 
-                    val = strchr(str, '=');
+                    val = strchr (str, '=');
                     if (!val)
                         continue;
-                    key = xstrndup(str, val - str);
-                    val = xstrdup(val + 1);
-                    comments_add(&c, key, val);
-                    free(key);
+                    key = xstrndup (str, val - str);
+                    val = xstrdup (val + 1);
+                    comments_add (&c, key, val);
+                    free (key);
                 }
-                key_value_terminate(&c);
-                priv->comments = c.keyValues;
+                key_value_terminate (&c);
+                p->comments = c.keyValues;
             }
             break;
-        default:
-            d_print("something else\n");
+        }
+        default: {
+            DEBUG ("something else");
             break;
+        }
     }
 }
 
-static void error_cb(const Dec *dec, FLAC__StreamDecoderErrorStatus status, void *data)
+static void error_cb (const Dec* dec, FLAC__StreamDecoderErrorStatus status, void* data)
 {
-    d_print("FLAC error: %s\n", FLAC__StreamDecoderErrorStatusString[status]);
+    (void) dec;
+    (void) data;
+    DEBUG ("FLAC error: %s", FLAC__StreamDecoderErrorStatusString[status]);
 }
 
-static void free_priv(InputPluginData* ip_data)
+static void free_private (InputPluginData* ip_data)
 {
-    FlacPrivate* priv = ip_data->private;
+    FlacPrivate* p = ip_data->private;
     int save = errno;
 
-    F(finish)(priv->dec);
-    F(delete)(priv->dec);
-    if (priv->comments)
-        key_value_free(priv->comments);
-    free(priv->buf);
-    free(priv);
+    F(finish)(p->dec);
+    F(delete)(p->dec);
+    if (p->comments) {
+        key_value_free(p->comments);
+    }
+    free(p->buf);
+    free(p);
     ip_data->private = NULL;
     errno = save;
 }
@@ -332,11 +344,11 @@ static void channel_map_init_flac(int channels, ChannelPosition* map)
 
 static int flac_open(InputPluginData* ip_data)
 {
-    FlacPrivate* priv;
+    FlacPrivate* p = NULL;
 
     Dec *dec = F(new)();
 
-    const FlacPrivate priv_init = {
+    const FlacPrivate privateInit = {
         .dec      = dec,
         .duration = -1,
         .bitrate  = -1,
@@ -346,121 +358,124 @@ static int flac_open(InputPluginData* ip_data)
     if (!dec)
         return -INPUT_ERROR_INTERNAL;
 
-    priv = (FlacPrivate*) xnew (FlacPrivate, 1);
-    *priv = priv_init;
+    p = (FlacPrivate*) xnew (FlacPrivate, 1);
+    *p = privateInit;
     if (ip_data->remote) {
-        priv->len = UINT64_MAX;
-    } else {
+        p->len = UINT64_MAX;
+    }
+    else {
         off_t off = lseek(ip_data->fd, 0, SEEK_END);
 
         if (off == -1 || lseek(ip_data->fd, 0, SEEK_SET) == -1) {
             int save = errno;
-
             F(delete)(dec);
-            free(priv);
+            free(p);
             errno = save;
             return -INPUT_ERROR_ERRNO;
         }
-        priv->len = off;
+        p->len = off;
     }
-    ip_data->private = priv;
+    ip_data->private = p;
 
     FLAC__stream_decoder_set_metadata_respond_all(dec);
-    if (FLAC__stream_decoder_init_stream(dec, read_cb, seek_cb, tell_cb,
-                                         length_cb, eof_cb, write_cb, metadata_cb,
-                                         error_cb, ip_data) != E(INIT_STATUS_OK)) {
+    if (FLAC__stream_decoder_init_stream(dec, read_cb, seek_cb, tell_cb, length_cb, eof_cb, write_cb, metadata_cb, error_cb, ip_data) != E(INIT_STATUS_OK)) {
         int save = errno;
 
-        d_print("init failed\n");
-        F(delete)(priv->dec);
-        free(priv);
+        DEBUG ("init failed");
+        F(delete)(p->dec);
+        free(p);
         ip_data->private = NULL;
         errno = save;
         return -INPUT_ERROR_ERRNO;
     }
 
     ip_data->sf = 0;
-    if (!F(process_until_end_of_metadata)(priv->dec)) {
-        free_priv(ip_data);
+    if (!F(process_until_end_of_metadata)(p->dec)) {
+        free_private(ip_data);
         return -INPUT_ERROR_ERRNO;
     }
 
     if (!ip_data->sf) {
-        free_priv(ip_data);
+        free_private(ip_data);
         return -INPUT_ERROR_FILE_FORMAT;
     }
     int bits = sf_get_bits(ip_data->sf);
     if (!bits) {
-        free_priv(ip_data);
+        free_private(ip_data);
         return -INPUT_ERROR_SAMPLE_FORMAT;
     }
 
     int channels = sf_get_channels(ip_data->sf);
     if (channels > 8) {
-        free_priv(ip_data);
+        free_private(ip_data);
         return -INPUT_ERROR_FILE_FORMAT;
     }
 
     channel_map_init_flac(sf_get_channels(ip_data->sf), ip_data->channelMap);
-    d_print("sr: %d, ch: %d, bits: %d\n",
-            sf_get_rate(ip_data->sf),
-            channels,
-            bits);
+    DEBUG ("sr: %d, ch: %d, bits: %d", sf_get_rate(ip_data->sf), channels, bits);
+
     return 0;
 }
 
 static int flac_close(InputPluginData* ip_data)
 {
-    free_priv(ip_data);
+    free_private(ip_data);
+
     return 0;
 }
 
-static int flac_read(InputPluginData* ip_data, char *buffer, int count)
+static int flac_read (InputPluginData* ip_data, char *buffer, int count)
 {
-    FlacPrivate* priv = ip_data->private;
+    FlacPrivate* p = ip_data->private;
     int avail;
 
     while (1) {
-        avail = priv->bufWritePos - priv->bufReadPos;
+        avail = p->bufWritePos - p->bufReadPos;
         BUG_ON(avail < 0);
-        if (avail > 0)
+        if (avail > 0) {
             break;
-        FLAC__bool internal_error = !F(process_single)(priv->dec);
-        FLAC__StreamDecoderState state = F(get_state)(priv->dec);
-        if (state == E(END_OF_STREAM))
+        }
+        FLAC__bool internal_error = !F(process_single)(p->dec);
+        FLAC__StreamDecoderState state = F(get_state)(p->dec);
+        if (state == E(END_OF_STREAM)) {
             return 0;
+        }
+
         if (state == E(ABORTED) || state == E(OGG_ERROR) || internal_error) {
-            d_print("process_single failed\n");
+            DEBUG ("process_single failed");
             return -1;
         }
     }
-    if (count > avail)
+    if (count > avail) {
         count = avail;
-    memcpy(buffer, priv->buf + priv->bufReadPos, count);
-    priv->bufReadPos += count;
-    BUG_ON(priv->bufReadPos > priv->bufWritePos);
-    if (priv->bufReadPos == priv->bufWritePos) {
-        priv->bufReadPos = 0;
-        priv->bufWritePos = 0;
     }
+    memcpy(buffer, p->buf + p->bufReadPos, count);
+    p->bufReadPos += count;
+    BUG_ON(p->bufReadPos > p->bufWritePos);
+    if (p->bufReadPos == p->bufWritePos) {
+        p->bufReadPos = 0;
+        p->bufWritePos = 0;
+    }
+
     return count;
 }
 
 /* Flush the input and seek to an absolute sample. Decoding will resume at the
  * given sample.
  */
-static int flac_seek(InputPluginData* ip_data, double offset)
+static int flac_seek (InputPluginData* ip_data, double offset)
 {
-    FlacPrivate* priv = ip_data->private;
-    priv->bufReadPos = 0;
-    priv->bufWritePos = 0;
+    FlacPrivate* p = ip_data->private;
+    p->bufReadPos = 0;
+    p->bufWritePos = 0;
     uint64_t sample;
 
     sample = (uint64_t)(offset * (double)sf_get_rate(ip_data->sf) + 0.5);
-    if (!F(seek_absolute)(priv->dec, sample)) {
-        if (F(get_state(priv->dec)) == FLAC__STREAM_DECODER_SEEK_ERROR) {
-            if (!F(flush)(priv->dec))
-                d_print("failed to flush\n");
+    if (!F(seek_absolute)(p->dec, sample)) {
+        if (F(get_state(p->dec)) == FLAC__STREAM_DECODER_SEEK_ERROR) {
+            if (!F(flush)(p->dec)) {
+                DEBUG ("failed to flush");
+            }
         }
         return -INPUT_ERROR_ERRNO;
     }
@@ -469,41 +484,43 @@ static int flac_seek(InputPluginData* ip_data, double offset)
 
 static int flac_read_comments (InputPluginData* ip_data, KeyValue** comments)
 {
-    FlacPrivate* priv = ip_data->private;
+    FlacPrivate* p = ip_data->private;
 
-    if (priv->comments) {
-        *comments = key_value_dup(priv->comments);
+    if (p->comments) {
+        *comments = key_value_dup(p->comments);
     } else {
         *comments = key_value_new(0);
     }
     return 0;
 }
 
-static int flac_duration(InputPluginData* ip_data)
+static int flac_duration (InputPluginData* ip_data)
 {
-    FlacPrivate* priv = ip_data->private;
+    FlacPrivate* p= ip_data->private;
 
-    return priv->duration;
+    return p->duration;
 }
 
-static long flac_bitrate(InputPluginData* ip_data)
+static long flac_bitrate (InputPluginData* ip_data)
 {
-    FlacPrivate* priv = ip_data->private;
-    return priv->bitrate;
+    FlacPrivate* p= ip_data->private;
+    return p->bitrate;
 }
 
-static char *flac_codec(InputPluginData* ip_data)
+static char *flac_codec (InputPluginData* ipData)
 {
+    (void*) ipData;
+
     return xstrdup("flac");
 }
 
-static char *flac_codec_profile(InputPluginData* ip_data)
+static char* flac_codec_profile (InputPluginData* ipData)
 {
     /* maybe identify compression-level over min/max blocksize/framesize */
     return NULL;
 }
 
-const InputPluginOps  ip_ops = {
+const InputPluginOps  ipOps = {
     .Open = flac_open,
     .Close = flac_close,
     .Read = flac_read,
@@ -516,8 +533,8 @@ const InputPluginOps  ip_ops = {
     .CodecProfile = flac_codec_profile
 };
 
-const int ip_priority = 50;
-const char * const ip_extensions[] = { "flac", "fla", NULL };
-const char * const ip_mime_types[] = { NULL };
-const InputPluginOps ip_options[] = { { NULL } };
-const unsigned ip_abi_version = INPUT_ABI_VERSION;
+const int ipPriority = 50;
+const char * const ipExtensions[] = { "flac", "fla", NULL };
+const char * const ipMime_types[] = { NULL };
+const InputPluginOps ipOptions[] = { { NULL } };
+const unsigned ipAbiVersion = INPUT_ABI_VERSION;
