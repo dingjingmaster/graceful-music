@@ -41,8 +41,9 @@ message(STATUS "Arch: '${ARCH}'")
 
 find_package (PkgConfig)
 
-pkg_check_modules(GLIB REQUIRED glib-2.0)
+pkg_check_modules(FLAC REQUIRED flac)
 pkg_check_modules(GIO REQUIRED gio-2.0)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
 pkg_check_modules(GIO_UNIX REQUIRED gio-unix-2.0)
 #pkg_check_modules(GTK REQUIRED gtk4)
 #pkg_check_modules(PCRE REQUIRED libpcre2-8)

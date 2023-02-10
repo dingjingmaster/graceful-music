@@ -75,5 +75,5 @@ FILE(GLOB GM_SRC
 )
 
 add_executable(graceful-music main.c ${GM_SRC} ${COMMON_SRC} ${PLUGINS_SRC})
-target_link_libraries(graceful-music ${GIO_LIBRARIES} -lm -lpthread -lncursesw -ldl -lcddb -lcdio_cdda -lcdio -lmad -lmodplug -lwavpack -lfaad -lavcodec -lpulse -lsystemd)
-target_link_directories(graceful-music PUBLIC ${GIO_INCLUDE_DIRS})
+target_link_libraries(graceful-music ${GIO_LIBRARIES} ${FLAC_LIBRARIES} -lm -lpthread -lncursesw -ldl -lcddb -lcdio_cdda -lcdio -lmad -lmodplug -lwavpack -lfaad -lavcodec -lpulse -lsystemd)
+target_link_directories(graceful-music PUBLIC ${GIO_INCLUDE_DIRS} ${FLAC_INCLUDE_DIRS})
