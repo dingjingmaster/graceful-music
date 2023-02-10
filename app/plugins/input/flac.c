@@ -522,7 +522,7 @@ static char* flac_codec_profile (InputPluginData* ipData)
 
 
 //
-const InputPluginOps  ops = {
+static const InputPluginOps  ops = {
     .Open = flac_open,
     .Close = flac_close,
     .Read = flac_read,
@@ -535,12 +535,12 @@ const InputPluginOps  ops = {
     .CodecProfile = flac_codec_profile
 };
 
-const int priority = 50;
-const char* name = "flac plugin";
-const char * const extensions[] = { "flac", "fla", NULL };
-const char * const mimeTypes[] = { NULL };
-const InputPluginOpt options[] = { { NULL } };
-const unsigned int abiVersion = INPUT_ABI_VERSION;
+static const int priority = 50;
+static const char* name = "flac plugin";
+static const char * const mimeTypes[] = { NULL };
+static const InputPluginOpt options[] = { { NULL } };
+static const unsigned int abiVersion = INPUT_ABI_VERSION;
+static const char * const extensions[] = { "flac", "fla", NULL };
 
 void flac_input_register (InputPlugin* plugin)
 {

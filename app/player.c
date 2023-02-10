@@ -450,7 +450,7 @@ static void player_error(const char *msg)
 	player_info_priv.error_msg = xstrdup(msg);
 	player_info_priv_unlock();
 
-	ERROR ("ERROR: '%s'\n", msg);
+	ERROR ("ERROR: '%s'", msg);
 }
 
 static void CMUS_FORMAT(2, 3) player_ip_error(int rc, const char *format, ...)
@@ -1291,7 +1291,7 @@ void player_seek(double offset, int relative, int start_playing)
  */
 void player_set_op(const char *name)
 {
-	int rc;
+	int rc = 0;
 
 	player_lock();
 
@@ -1302,14 +1302,14 @@ void player_set_op(const char *name)
 	if (consumer_status == CS_PLAYING || consumer_status == CS_PAUSED)
 		op_close();
 
-	if (name) {
-		LOG_DEBUG ("setting op to '%s'", name);
-		rc = op_select(name);
-	} else {
-		/* first initialized plugin */
-		LOG_DEBUG ("selecting first initialized op");
-		rc = op_select_any();
-	}
+//	if (name) {
+//		LOG_DEBUG ("setting op to '%s'", name);
+//		rc = op_select(name);
+//	} else {
+//		/* first initialized plugin */
+//		LOG_DEBUG ("selecting first initialized op");
+//		rc = op_select_any();
+//	}
 	if (rc) {
 		_consumer_status_update(CS_STOPPED);
 

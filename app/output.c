@@ -1,60 +1,75 @@
 #include "output.h"
-#include "mixer-interface.h"
+
 #include "sf.h"
-#include "utils.h"
-#include "xmalloc.h"
-#include "list.h"
-#include "debug.h"
-#include "ui_curses.h"
-#include "options.h"
-#include "xstrjoin.h"
-#include "misc.h"
 #include "log.h"
+#include "misc.h"
+#include "list.h"
+#include "utils.h"
+#include "debug.h"
+#include "global.h"
+#include "xmalloc.h"
+#include "xstrjoin.h"
 #include "interface.h"
+#include "ui_curses.h"
+#include "mixer-interface.h"
 #include "plugins/output-interface.h"
 
+#include <stdio.h>
+#include <dlfcn.h>
+#include <dirent.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <sys/types.h>
-#include <dirent.h>
-#include <dlfcn.h>
 
 
-extern const char* libDir;
-extern const char* dataDir;
-
-
-
-static const char*  pluginDir;
-static LIST_HEAD(op_head);
-static OutputPlugin *op = NULL;
+OutputPlugins*                  gOutputPlugins = NULL;
+OutputPlugin*                   gOutputPlugin = NULL;
 
 /* volume is between 0 and volume_max */
 int volume_max = 0;
 int volume_l = -1;
 int volume_r = -1;
 
-static void add_plugin(OutputPlugin *plugin)
-{
-	struct list_head *item = op_head.next;
-
-//	while (item != &op_head) {
-//		OutputPlugin *o = container_of(item, OutputPlugin, node);
+//static void add_plugin (OutputPlugin* plugin)
+//{
+//    if (!plugin) {
+//        WARNING ("plugin is null ???");
+//        return;
+//    }
 //
-//		if (plugin->priority < o->priority)
-//			break;
-//		item = item->next;
-//	}
+//    if (!gOutputPlugin)     gOutputPlugin = plugin;
 //
-//	/* add before item */
-//	list_add_tail(&plugin->node, item);
-}
+//    OutputPlugins** t = &gOutputPlugins;
+//    for (OutputPlugins* l = gOutputPlugins; NULL != l; l = l->next) {
+//        OutputPlugin* p = (OutputPlugin*) l->data;
+//        if (p->priority > plugin->priority) {
+//            t = &l;
+//            break;
+//        }
+//    }
+//
+//    g_list_insert_before (gOutputPlugins, *t, plugin);
+//
+////	struct list_head *item = op_head.next;
+//
+////	while (item != &op_head) {
+////		OutputPlugin *o = container_of(item, OutputPlugin, node);
+////
+////		if (plugin->priority < o->priority)
+////			break;
+////		item = item->next;
+////	}
+////
+////	/* add before item */
+////	list_add_tail(&plugin->node, item);
+//}
 
 void op_load_plugins(void)
 {
+    output_plugin_register();
+#if 0
 	DIR *dir;
 	struct dirent *d;
 
@@ -134,6 +149,7 @@ void op_load_plugins(void)
 //		add_plugin(plug);
 	}
 	closedir(dir);
+#endif
 }
 
 static void init_plugin(OutputPlugin *o)
@@ -180,7 +196,7 @@ void mixer_close(void)
 
 void mixer_open(void)
 {
-	if (op == NULL)
+	if (gOutputPlugin == NULL)
 		return;
 
 //	BUG_ON(op->mixerOpen);
@@ -197,7 +213,7 @@ void mixer_open(void)
 //	}
 }
 
-static int select_plugin(OutputPlugin *o)
+static int select_plugin (OutputPlugin *o)
 {
 	/* try to initialize if not initialized yet */
 	init_plugin(o);
@@ -223,7 +239,7 @@ int op_select_any(void)
 {
 	OutputPlugin *o;
 	int rc = -OUTPUT_ERROR_NO_PLUGIN;
-	sample_format_t sf = sf_channels(2) | sf_rate(44100) | sf_bits(16) | sf_signed(1);
+	SampleFormat sf = sf_channels(2) | sf_rate(44100) | sf_bits(16) | sf_signed(1);
 
 //	list_for_each_entry(o, &op_head, node) {
 //		rc = select_plugin(o);
@@ -238,84 +254,109 @@ int op_select_any(void)
 	return rc;
 }
 
-int op_open(sample_format_t sf, const ChannelPosition* channel_map)
+int op_open (SampleFormat sf, const ChannelPosition* channelMap)
 {
-	if (op == NULL)
-		return -OUTPUT_ERROR_NOT_INITIALIZED;
-	return op->pcmOps->Open(sf, channel_map);
+	if (gOutputPlugin == NULL) {
+        return -OUTPUT_ERROR_NOT_INITIALIZED;
+    }
+
+	return gOutputPlugin->pcmOps->Open(sf, channelMap);
 }
 
-int op_drop(void)
+int op_drop (void)
 {
-	if (op->pcmOps->Drop == NULL)
-		return -OUTPUT_ERROR_NOT_SUPPORTED;
-	return op->pcmOps->Drop();
+	if (gOutputPlugin->pcmOps->Drop == NULL) {
+        return -OUTPUT_ERROR_NOT_SUPPORTED;
+    }
+
+	return gOutputPlugin->pcmOps->Drop();
 }
 
-int op_close(void)
+int op_close (void)
 {
-	return op->pcmOps->Close();
+	return gOutputPlugin->pcmOps->Close();
 }
 
-int op_write(const char *buffer, int count)
+int op_write (const char* buffer, int count)
 {
-	return op->pcmOps->Write(buffer, count);
+	return gOutputPlugin->pcmOps->Write(buffer, count);
 }
 
 int op_pause(void)
 {
-	if (op->pcmOps->Pause == NULL)
-		return 0;
-	return op->pcmOps->Pause();
+	if (gOutputPlugin->pcmOps->Pause == NULL) {
+        return 0;
+    }
+
+	return gOutputPlugin->pcmOps->Pause();
 }
 
 int op_unpause(void)
 {
-	if (op->pcmOps->Unpause == NULL)
-		return 0;
-	return op->pcmOps->Unpause();
+	if (gOutputPlugin->pcmOps->Unpause == NULL) {
+        return 0;
+    }
+
+	return gOutputPlugin->pcmOps->Unpause();
 }
 
 int op_buffer_space(void)
 {
-	return op->pcmOps->BufferSpace();
+	return gOutputPlugin->pcmOps->BufferSpace();
 }
 
 int mixer_set_volume(int left, int right)
 {
-	if (op == NULL)
-		return -OUTPUT_ERROR_NOT_INITIALIZED;
-	if (!op->mixerOpen)
-		return -OUTPUT_ERROR_NOT_OPEN;
-	return op->mixerOps->SetVolume(left, right);
+	if (gOutputPlugin == NULL) {
+        return -OUTPUT_ERROR_NOT_INITIALIZED;
+    }
+
+	if (!gOutputPlugin->mixerOpen) {
+        return -OUTPUT_ERROR_NOT_OPEN;
+    }
+
+	return gOutputPlugin->mixerOps->SetVolume(left, right);
 }
 
 int mixer_read_volume(void)
 {
-	if (op == NULL)
-		return -OUTPUT_ERROR_NOT_INITIALIZED;
-	if (!op->mixerOpen)
-		return -OUTPUT_ERROR_NOT_OPEN;
-	return op->mixerOps->GetVolume(&volume_l, &volume_r);
+	if (gOutputPlugin == NULL) {
+        return -OUTPUT_ERROR_NOT_INITIALIZED;
+    }
+
+	if (!gOutputPlugin->mixerOpen) {
+        return -OUTPUT_ERROR_NOT_OPEN;
+    }
+
+	return gOutputPlugin->mixerOps->GetVolume(&volume_l, &volume_r);
 }
 
 int mixer_get_fds(int what, int *fds)
 {
-	if (op == NULL)
-		return -OUTPUT_ERROR_NOT_INITIALIZED;
-	if (!op->mixerOpen)
-		return -OUTPUT_ERROR_NOT_OPEN;
-	switch (op->abiVersion) {
-	case 1:
-		if (!op->mixerOps->getFds.abi1)
-			return -OUTPUT_ERROR_NOT_SUPPORTED;
-		if (what != MIXER_FDS_VOLUME)
-			return 0;
-		return op->mixerOps->getFds.abi1(fds);
-	default:
-		if (!op->mixerOps->getFds.abi2)
-			return -OUTPUT_ERROR_NOT_SUPPORTED;
-		return op->mixerOps->getFds.abi2(what, fds);
+	if (gOutputPlugin == NULL) {
+        return -OUTPUT_ERROR_NOT_INITIALIZED;
+    }
+
+	if (!gOutputPlugin->mixerOpen) {
+        return -OUTPUT_ERROR_NOT_OPEN;
+    }
+
+	switch (gOutputPlugin->abiVersion) {
+        case 1: {
+            if (!gOutputPlugin->mixerOps->getFds.abi1) {
+            return -OUTPUT_ERROR_NOT_SUPPORTED;
+            }
+            if (what != MIXER_FDS_VOLUME) {
+                return 0;
+            }
+            return gOutputPlugin->mixerOps->getFds.abi1 (fds);
+        }
+	    default: {
+		    if (!gOutputPlugin->mixerOps->getFds.abi2) {
+                return -OUTPUT_ERROR_NOT_SUPPORTED;
+            }
+		    return gOutputPlugin->mixerOps->getFds.abi2(what, fds);
+        }
 	}
 }
 
@@ -324,7 +365,7 @@ extern int soft_vol;
 static void option_error(int rc)
 {
 	char *msg = op_get_error_msg(rc, "setting option");
-	error_msg("%s", msg);
+	ERROR ("%s", msg);
 	free(msg);
 }
 
@@ -334,19 +375,22 @@ static void set_dsp_option(void *data, const char *val)
 	int rc;
 
 	rc = o->Set (val);
-	if (rc)
-		option_error(rc);
+	if (rc) {
+        option_error(rc);
+    }
 }
 
 static bool option_of_current_mixer(const MixerPluginOpt* opt)
 {
 	const MixerPluginOpt* mpo;
 
-	if (!op)
-		return false;
-	for (mpo = op->mixerOptions; mpo && mpo->name; mpo++) {
-		if (mpo == opt)
-			return true;
+	if (!gOutputPlugin) {
+        return false;
+    }
+	for (mpo = gOutputPlugin->mixerOptions; mpo && mpo->name; mpo++) {
+		if (mpo == opt) {
+            return true;
+        }
 	}
 	return false;
 }
@@ -363,8 +407,9 @@ static void set_mixer_option(void *data, const char *val)
 		/* option of the current op was set
 		 * try to reopen the mixer */
 		mixer_close();
-		if (!soft_vol)
-			mixer_open();
+		if (!soft_vol) {
+            mixer_open();
+        }
 	}
 }
 
@@ -420,42 +465,43 @@ char *op_get_error_msg(int rc, const char *arg)
 	char buffer[1024];
 
 	switch (-rc) {
-	case OUTPUT_ERROR_ERRNO:
-		snprintf(buffer, sizeof(buffer), "%s: %s", arg, strerror(errno));
-		break;
-	case OUTPUT_ERROR_NO_PLUGIN:
-		snprintf(buffer, sizeof(buffer),
-				"%s: no such plugin", arg);
-		break;
-	case OUTPUT_ERROR_NOT_INITIALIZED:
-		snprintf(buffer, sizeof(buffer),
-				"%s: couldn't initialize required output plugin", arg);
-		break;
-	case OUTPUT_ERROR_NOT_SUPPORTED:
-		snprintf(buffer, sizeof(buffer),
-				"%s: function not supported", arg);
-		break;
-	case OUTPUT_ERROR_NOT_OPEN:
-		snprintf(buffer, sizeof(buffer),
-				"%s: mixer is not open", arg);
-		break;
-	case OUTPUT_ERROR_SAMPLE_FORMAT:
-		snprintf(buffer, sizeof(buffer),
-				"%s: sample format not supported", arg);
-		break;
-	case OUTPUT_ERROR_NOT_OPTION:
-		snprintf(buffer, sizeof(buffer),
-				"%s: no such option", arg);
-		break;
-	case OUTPUT_ERROR_INTERNAL:
-		snprintf(buffer, sizeof(buffer), "%s: internal error", arg);
-		break;
-	case OUTPUT_ERROR_SUCCESS:
-	default:
-		snprintf(buffer, sizeof(buffer),
-				"%s: this is not an error (%d), this is a bug",
-				arg, rc);
-		break;
+	    case OUTPUT_ERROR_ERRNO: {
+            snprintf (buffer, sizeof (buffer), "%s: %s", arg, strerror (errno));
+            break;
+        }
+	    case OUTPUT_ERROR_NO_PLUGIN: {
+            snprintf (buffer, sizeof (buffer), "%s: no such plugin", arg);
+            break;
+        }
+	    case OUTPUT_ERROR_NOT_INITIALIZED: {
+            snprintf (buffer, sizeof (buffer), "%s: couldn't initialize required output plugin", arg);
+            break;
+        }
+	    case OUTPUT_ERROR_NOT_SUPPORTED: {
+            snprintf (buffer, sizeof (buffer), "%s: function not supported", arg);
+            break;
+        }
+	    case OUTPUT_ERROR_NOT_OPEN: {
+            snprintf (buffer, sizeof (buffer), "%s: mixer is not open", arg);
+            break;
+        }
+	    case OUTPUT_ERROR_SAMPLE_FORMAT: {
+            snprintf (buffer, sizeof (buffer), "%s: sample format not supported", arg);
+            break;
+        }
+	    case OUTPUT_ERROR_NOT_OPTION: {
+            snprintf (buffer, sizeof (buffer), "%s: no such option", arg);
+            break;
+        }
+	    case OUTPUT_ERROR_INTERNAL: {
+            snprintf (buffer, sizeof (buffer), "%s: internal error", arg);
+            break;
+        }
+	    case OUTPUT_ERROR_SUCCESS:
+	    default: {
+            snprintf (buffer, sizeof (buffer), "%s: this is not an error (%d), this is a bug", arg, rc);
+            break;
+        }
 	}
 	return xstrdup(buffer);
 }
@@ -464,7 +510,7 @@ void op_dump_plugins(void)
 {
 	OutputPlugin *o;
 
-	printf("\nOutput Plugins: %s\n", pluginDir);
+//	printf("\nOutput Plugins: %s\n", pluginDir);
 //	list_for_each_entry(o, &op_head, node) {
 //		printf("  %s\n", o->name);
 //	}
@@ -472,7 +518,9 @@ void op_dump_plugins(void)
 
 const char *op_get_current(void)
 {
-	if (op)
-		return op->name;
+	if (gOutputPlugin) {
+        return gOutputPlugin->name;
+    }
+
 	return NULL;
 }

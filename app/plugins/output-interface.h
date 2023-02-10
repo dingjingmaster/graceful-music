@@ -52,8 +52,8 @@ struct _OutputPluginOps
 struct _OutputPluginOpt
 {
     const char*         name;
-    int (*Get)          (char** val);
     int (*Set)          (const char* val);
+    int (*Get)          (char** val);
 };
 
 /* symbols exported by plugin */

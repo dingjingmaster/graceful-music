@@ -8,7 +8,7 @@
 
 typedef unsigned int                SampleFormat;
 typedef struct _InputPlugins        InputPlugins;
-typedef struct _OutputPlugins       OutputPlugins;
+typedef GList                       OutputPlugins;
 
 extern char*                        gLogPath;
 extern char*                        gCharset;
@@ -20,7 +20,7 @@ extern const char*                  gRuntimeDir;
 extern const char*                  gPlaylistDir;
 
 extern InputPlugins*                gInputPlugins;
-
+extern OutputPlugins*               gOutputPlugins;     // list of OutPlugin
 
 
 /**
@@ -32,7 +32,7 @@ extern InputPlugins*                gInputPlugins;
  */
 struct _InputPlugins
 {
-    GList*              plugins;                    // list of InputPlugin
+    GList*              plugins;                        // list of InputPlugin
     // FIXME:// filter plugins by name ?
     GHashTable*         pluginExtIndex;
     GHashTable*         pluginMimeIndex;

@@ -17,9 +17,10 @@
 #define REGISTER_INPUT_PLUGIN(name) \
 {                                                                               \
     InputPlugin* name##ip = (InputPlugin*) g_malloc0 (sizeof (InputPlugin));    \
-    name##_input_register(name##ip);                                            \
+    name##_input_register (name##ip);                                           \
     if (!name##ip->ops) {                                                       \
         g_free (name##ip);                                                      \
+        LOG_ERROR ("register input plugin '%s' error", #name);                  \
     }                                                                           \
     else {                                                                      \
         GList* name##l = gInputPlugins->plugins;                                \
@@ -38,6 +39,25 @@
         LOG_DEBUG ("register input plugin '%s' ok", #name);                     \
     }                                                                           \
 }
+
+#define REGISTER_OUTPUT_PLUGIN(name) \
+{                                                                               \
+    OutputPlugin* name##op = (OutputPlugin*) g_malloc0 (sizeof (OutputPlugin)); \
+    name##_output_register (name##op);                                          \
+    if (!name##op->pcmOps && !name##op->mixerOps) {                             \
+        g_free (name##op);                                                      \
+        LOG_ERROR ("register output plugin '%s' error", #name);                 \
+    }                                                                           \
+    else {                                                                      \
+        gOutputPlugins = g_list_prepend (gOutputPlugins, name##op);             \
+        LOG_DEBUG ("register output plugin '%s' ok", #name);                    \
+        gOutputPlugins = g_list_sort (gOutputPlugins, output_plugin_compare);   \
+        if (!gOutputRegisted) {                                                 \
+            gOutputPlugin = (OutputPlugin*) gOutputPlugins->data;               \
+        }                                                                       \
+    }                                                                           \
+}
+
 
 struct _InputPlugin
 {
@@ -83,7 +103,7 @@ struct _OutputPlugin
     char*                               name;
     void*                               handle;
 
-    const unsigned int                  abiVersion;
+    unsigned int                        abiVersion;
     const OutputPluginOps*              pcmOps;
     const MixerPluginOps*               mixerOps;
     const OutputPluginOpt*              pcmOptions;
