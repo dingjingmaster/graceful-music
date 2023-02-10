@@ -16,6 +16,7 @@
 
 #define INPUT_ABI_VERSION                                   1
 
+typedef struct _InputPlugin                                 InputPlugin;
 typedef struct _InputPluginOps                              InputPluginOps;
 typedef struct _InputPluginOpt                              InputPluginOpt;
 typedef struct _InputPluginData                             InputPluginData;
@@ -81,6 +82,10 @@ struct _InputPluginOpt
     int     (*Get)                  (char** val);
 };
 
+/**
+ * @brief
+ *  插件里需要实现的信息
+ */
 extern const InputPluginOps         gInputOps;
 extern const int                    gInputPriority;
 extern const char* const            gInputExtensions[];

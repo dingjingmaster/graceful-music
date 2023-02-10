@@ -7,9 +7,9 @@
 
 #include "sf.h"
 #include "key-value.h"
+#include "interface.h"
 #include "channel-map.h"
 
-typedef struct _InputPlugin         InputPlugin;
 
 void ip_load_plugins(void);
 

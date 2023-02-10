@@ -96,8 +96,13 @@ void global_value_init ()
         DIE_BEFORE_LOG_INIT ("InputPlugin malloc error, '%s'", g_strerror (errno));
     }
 
-    gInputPlugins->pluginIndex = g_hash_table_new (g_str_hash, g_str_equal);
-    if (!gInputPlugins->pluginIndex) {
-        DIE_BEFORE_LOG_INIT ("InputPlugin.pluginIndex init error, '%s'", g_strerror(errno));
+    gInputPlugins->pluginExtIndex = g_hash_table_new (g_str_hash, g_str_equal);
+    if (!gInputPlugins->pluginExtIndex) {
+        DIE_BEFORE_LOG_INIT ("InputPlugin.pluginExtIndex init error, '%s'", g_strerror(errno));
+    }
+
+    gInputPlugins->pluginMimeIndex = g_hash_table_new (g_str_hash, g_str_equal);
+    if (!gInputPlugins->pluginMimeIndex) {
+        DIE_BEFORE_LOG_INIT ("InputPlugin.pluginMimeIndex init error, '%s'", g_strerror(errno));
     }
 }

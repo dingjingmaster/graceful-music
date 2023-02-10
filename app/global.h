@@ -31,8 +31,10 @@ extern InputPlugins*                gInputPlugins;
  */
 struct _InputPlugins
 {
-    GList*              plugins;
-    GHashTable*         pluginIndex;
+    GList*              plugins;                    // list of InputPlugin
+    // FIXME:// filter plugins by name ?
+    GHashTable*         pluginExtIndex;
+    GHashTable*         pluginMimeIndex;
 };
 
 

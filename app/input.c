@@ -21,7 +21,6 @@
 #include "xstrjoin.h"
 #include "ui_curses.h"
 #include "mergesort.h"
-#include "input-interface.h"
 
 #include <dlfcn.h>
 #include <errno.h>
@@ -45,34 +44,6 @@ typedef struct _Input                   Input;
 // FIXME:// DJ- 后续要修改
 extern const char* libDir;
 extern const char* dataDir;
-
-struct _InputPlugin
-{
-    const InputPluginOps*               ops;
-    InputPluginData                     data;
-    unsigned int                        open : 1;
-    unsigned int                        eof : 1;
-    int                                 httpCode;
-    char*                               httpReason;
-
-    int                                 duration;       // cached duration, -1 = unset
-    long                                bitrate;        // cached bitrate, -1 = unset
-    char*                               codec;          // cached codec, NULL = unset
-    char*                               codecProfile;   // cached codec_profile, NULL = unset
-
-    /*
-     * pcm is converted to 16-bit signed little-endian stereo
-     * NOTE: no conversion is done if channels > 2 or bits > 16
-     */
-    void (*PcmConvert)          (void*, const void*, int);
-    void (*PcmConvertInPlace)   (void*, int);
-    /*
-     * 4  if 8-bit mono
-     * 2  if 8-bit stereo or 16-bit mono
-     * 1  otherwise
-     */
-    int                                 pcmConvertScale;
-};
 
 struct _Input
 {
@@ -114,36 +85,13 @@ static const char *pl_mime_types[] = {
  *  通过文件扩展名获取 plugin
  */
 static const InputPluginOps* get_ops_by_extension_locked (const char* ext)
-//    static const InputPluginOps* get_ops_by_extension_locked (const char* ext, struct list_head** pHeader)
 {
-    GHashTable* index = gInputPlugins->pluginIndex;
+    GHashTable* index = gInputPlugins->pluginExtIndex;
 
     if (g_hash_table_contains (index, ext)) {
         InputPlugin* p = (InputPlugin*) g_hash_table_lookup (index, ext);
         return p->ops;
     }
-
-//    struct list_head *node = *headp;
-//
-//    for (node = node->next; node != &ip_head; node = node->next) {
-//        Input* ip = list_entry (node, Input, node);
-//        const char * const *exts = ip->extensions;
-//        int i;
-//
-//        if (ip->priority <= 0) {
-//            break;
-//        }
-//
-//        for (i = 0; exts[i]; i++) {
-//            if (strcasecmp(ext, exts[i]) == 0 || strcmp("*", exts[i]) == 0) {
-//                *headp = node;
-//                return ip->ops;
-//            }
-//        }
-//    }
-//
-//    for (GSList* node = *pHeader; node != NULL;)
-//
 
     return NULL;
 }
@@ -156,23 +104,15 @@ static const InputPluginOps* get_ops_by_extension (const char *ext)
     return rv;
 }
 
-static const InputPluginOps* get_ops_by_mime_type_locked (const char *mime_type)
+static const InputPluginOps* get_ops_by_mime_type_locked (const char* mimeType)
 {
-    Input* ip;
+    GHashTable* index = gInputPlugins->pluginMimeIndex;
 
-//    list_for_each_entry(ip, &ip_head, node) {
-//        const char * const *types = ip->mimeTypes;
-//        int i;
-//
-//        if (ip->priority <= 0) {
-//            break;
-//        }
-//
-//        for (i = 0; types[i]; i++) {
-//            if (strcasecmp(mime_type, types[i]) == 0)
-//                return ip->ops;
-//        }
-//    }
+    if (g_hash_table_contains (index, mimeType)) {
+        InputPlugin* p = (InputPlugin*) g_hash_table_lookup (index, mimeType);
+        return p->ops;
+    }
+
     return NULL;
 }
 
@@ -185,10 +125,7 @@ static const InputPluginOps* get_ops_by_mime_type (const char* mimeType)
     return rv;
 }
 
-static void key_value_add_basic_auth(struct growing_keyvals* c,
-                                   const char* user,
-                                   const char* pass,
-                                   const char* header)
+static void key_value_add_basic_auth(struct growing_keyvals* c, const char* user, const char* pass, const char* header)
 {
     char buf[256];
     char *encoded;
@@ -196,55 +133,63 @@ static void key_value_add_basic_auth(struct growing_keyvals* c,
     snprintf(buf, sizeof(buf), "%s:%s", user, pass);
     encoded = base64_encode(buf);
     if (encoded == NULL) {
-        d_print("couldn't base64 encode '%s'\n", buf);
-    } else {
+        DEBUG ("couldn't base64 encode '%s'", buf);
+    }
+    else {
         snprintf(buf, sizeof(buf), "Basic %s", encoded);
         free(encoded);
         key_value_add (c, header, xstrdup(buf));
     }
 }
 
-static int do_http_get(struct http_get *hg, const char *uri, int redirections)
+static int do_http_get (struct http_get *hg, const char *uri, int redirections)
 {
     GROWING_KEY_VALUES(h);
     int i, rc;
     const char *val;
     char *redirloc;
 
-    d_print("%s\n", uri);
+    DEBUG ("%s", uri);
 
     hg->headers = NULL;
     hg->reason = NULL;
     hg->proxy = NULL;
     hg->code = -1;
     hg->fd = -1;
-    if (http_parse_uri(uri, &hg->uri))
+    if (http_parse_uri(uri, &hg->uri)) {
         return -INPUT_ERROR_INVALID_URI;
+    }
 
-    if (http_open(hg, http_connection_timeout))
+    if (http_open(hg, http_connection_timeout)) {
         return -INPUT_ERROR_ERRNO;
+    }
 
     key_value_add(&h, "Host", xstrdup(hg->uri.host));
-    if (hg->proxy && hg->proxy->user && hg->proxy->pass)
+    if (hg->proxy && hg->proxy->user && hg->proxy->pass) {
         key_value_add_basic_auth(&h, hg->proxy->user, hg->proxy->pass, "Proxy-Authorization");
+    }
     key_value_add(&h, "User-Agent", xstrdup("cmus/" VERSION));
     key_value_add(&h, "Icy-MetaData", xstrdup("1"));
-    if (hg->uri.user && hg->uri.pass)
+    if (hg->uri.user && hg->uri.pass) {
         key_value_add_basic_auth(&h, hg->uri.user, hg->uri.pass, "Authorization");
+    }
     key_value_terminate(&h);
 
     rc = http_get(hg, h.keyValues, http_read_timeout);
     key_value_free(h.keyValues);
     switch (rc) {
-        case -1:
+        case -1: {
             return -INPUT_ERROR_ERRNO;
-        case -2:
+        }
+        case -2: {
             return -INPUT_ERROR_HTTP_RESPONSE;
+        }
     }
 
-    DEBUG ("HTTP response: %d %s\n", hg->code, hg->reason);
-    for (i = 0; hg->headers[i].key != NULL; i++)
+    DEBUG ("HTTP response: %d %s", hg->code, hg->reason);
+    for (i = 0; hg->headers[i].key != NULL; i++) {
         DEBUG ("  %s: %s\n", hg->headers[i].key, hg->headers[i].value);
+    }
 
     switch (hg->code) {
         case 200: /* OK */
@@ -256,14 +201,17 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
         case 301: /* Moved Permanently */
         case 302: /* Found */
         case 303: /* See Other */
-        case 307: /* Temporary Redirect */
+        case 307: {
+            /* Temporary Redirect */
             val = key_value_get_value(hg->headers, "location");
-            if (!val)
+            if (!val) {
                 return -INPUT_ERROR_HTTP_RESPONSE;
+            }
 
             redirections++;
-            if (redirections > 2)
+            if (redirections > 2) {
                 return -INPUT_ERROR_HTTP_REDIRECT_LIMIT;
+            }
 
             redirloc = xstrdup(val);
             http_get_free(hg);
@@ -273,28 +221,30 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 
             free(redirloc);
             return rc;
-        default:
+        }
+        default: {
             return -INPUT_ERROR_HTTP_STATUS;
+        }
     }
 }
 
-static int setup_remote(InputPlugin* ip, const struct keyval *headers, int sock)
+static int setup_remote (InputPlugin* ip, const struct keyval *headers, int sock)
 {
     const char *val;
 
     val = key_value_get_value (headers, "Content-Type");
     if (val) {
-        d_print("Content-Type: %s\n", val);
+        DEBUG ("Content-Type: %s", val);
         ip->ops = get_ops_by_mime_type(val);
         if (ip->ops == NULL) {
-            d_print("unsupported content type: %s\n", val);
+            DEBUG ("unsupported content type: %s", val);
             close(sock);
             return -INPUT_ERROR_FILE_FORMAT;
         }
     } else {
         const char *type = "audio/mpeg";
 
-        d_print("assuming %s content type\n", type);
+        DEBUG ("assuming %s content type", type);
         ip->ops = get_ops_by_mime_type(type);
         if (ip->ops == NULL) {
             DEBUG ("unsupported content type: %s", type);
@@ -317,27 +267,31 @@ static int setup_remote(InputPlugin* ip, const struct keyval *headers, int sock)
     }
 
     val = key_value_get_value (headers, "icy-name");
-    if (val)
+    if (val) {
         ip->data.icyName = to_utf8(val, icecast_default_charset);
+    }
 
     val = key_value_get_value (headers, "icy-genre");
-    if (val)
+    if (val) {
         ip->data.icyGenre = to_utf8(val, icecast_default_charset);
+    }
 
     val = key_value_get_value (headers, "icy-url");
-    if (val)
+    if (val) {
         ip->data.icyURL = to_utf8(val, icecast_default_charset);
+    }
 
     return 0;
 }
 
-struct read_playlist_data {
+struct read_playlist_data
+{
     InputPlugin* ip;
     int rc;
     int count;
 };
 
-static int handle_line(void *data, const char *uri)
+static int handle_line (void *data, const char *uri)
 {
     struct read_playlist_data *rpd = data;
     struct http_get hg;
@@ -347,8 +301,9 @@ static int handle_line(void *data, const char *uri)
     if (rpd->rc) {
         rpd->ip->httpCode = hg.code;
         rpd->ip->httpReason = hg.reason;
-        if (hg.fd >= 0)
+        if (hg.fd >= 0) {
             close(hg.fd);
+        }
 
         hg.reason = NULL;
         http_get_free(&hg);
@@ -357,6 +312,7 @@ static int handle_line(void *data, const char *uri)
 
     rpd->rc = setup_remote(rpd->ip, hg.headers, hg.fd);
     http_get_free(&hg);
+
     return 1;
 }
 
@@ -368,19 +324,20 @@ static int read_playlist(InputPlugin* ip, int sock)
 
     body = http_read_body(sock, &size, http_read_timeout);
     close(sock);
-    if (!body)
+    if (!body) {
         return -INPUT_ERROR_ERRNO;
+    }
 
     cmus_playlist_for_each(body, size, 0, handle_line, &rpd);
     free(body);
     if (!rpd.count) {
-        d_print("empty playlist\n");
+        DEBUG ("empty playlist");
         rpd.rc = -INPUT_ERROR_HTTP_RESPONSE;
     }
     return rpd.rc;
 }
 
-static int open_remote(InputPlugin* ip)
+static int open_remote (InputPlugin* ip)
 {
     InputPluginData* d = &ip->data;
     struct http_get hg;
@@ -411,10 +368,11 @@ static int open_remote(InputPlugin* ip)
 
     rc = setup_remote(ip, hg.headers, hg.fd);
     http_get_free(&hg);
+
     return rc;
 }
 
-static void ip_init(InputPlugin* ip, char *filename)
+static void ip_init (InputPlugin* ip, char *filename)
 {
     const InputPlugin t = {
         .httpCode           = -1,
@@ -431,7 +389,7 @@ static void ip_init(InputPlugin* ip, char *filename)
     *ip = t;
 }
 
-static void ip_reset(InputPlugin* ip, int close_fd)
+static void ip_reset (InputPlugin* ip, int close_fd)
 {
     int fd = ip->data.fd;
     free(ip->data.metaData);
@@ -472,8 +430,9 @@ static int open_file_locked (InputPlugin* ip)
             break;
 
         ops = get_ops_by_extension(ext);
-        if (!ops)
+        if (!ops) {
             break;
+        }
 
         ip_reset(ip, 0);
         DEBUG ("fallback: try next plugin for `%s'", ip->data.fileName);
@@ -482,15 +441,15 @@ static int open_file_locked (InputPlugin* ip)
     return rc;
 }
 
-static int open_file(InputPlugin* ip)
+static int open_file (InputPlugin* ip)
 {
     ip_rdlock();
-    int rv = open_file_locked(ip);
+    int rv = open_file_locked (ip);
     ip_unlock();
     return rv;
 }
 
-static int sort_ip(const struct list_head *a_, const struct list_head *b_)
+static int sort_ip (const struct list_head *a_, const struct list_head *b_)
 {
     const Input* a = list_entry(a_, Input, node);
     const Input* b = list_entry(b_, Input, node);
@@ -499,6 +458,15 @@ static int sort_ip(const struct list_head *a_, const struct list_head *b_)
 
 void ip_load_plugins(void)
 {
+    // FIXME:// lock
+    ip_wrlock();
+
+    // 加载默认 解码器
+    input_plugin_register();
+
+    ip_unlock();
+
+#if 0
     DIR *dir;
     struct dirent *d;
 
@@ -509,10 +477,12 @@ void ip_load_plugins(void)
         return;
     }
 
-    ip_wrlock();
+
+
+
     while (NULL != (d = (struct dirent *) readdir (dir))) {
         char filename[512] = {0};
-        Input* ip;
+//        Input* ip;
         void *so;
         char *ext;
         const int *priority_ptr;
@@ -544,7 +514,7 @@ void ip_load_plugins(void)
             continue;
         }
 
-        ip = xnew (Input, 1);
+//        ip = xnew (Input, 1);
 
         // FIXME:// DJ- 这些符号已废弃
 //        abi_version_ptr = dlsym(so, "ip_abi_version");
@@ -578,7 +548,7 @@ void ip_load_plugins(void)
 
     closedir(dir);
 
-    ip_unlock();
+#endif
 }
 
 InputPlugin* ip_new(const char *filename)

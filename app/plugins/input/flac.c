@@ -1,15 +1,15 @@
 //
 // Created by dingjing on 2/10/23.
 //
+#include "flac.h"
 
-#include "input-interface.h"
-
+#include "sf.h"
 #include "log.h"
 #include "utils.h"
 #include "debug.h"
 #include "xmalloc.h"
+#include "interface.h"
 #include "../comment.h"
-#include "sf.h"
 
 #include <errno.h>
 #include <stdint.h>
@@ -270,7 +270,7 @@ static void error_cb (const Dec* dec, FLAC__StreamDecoderErrorStatus status, voi
 {
     (void) dec;
     (void) data;
-    DEBUG ("FLAC error: %s", FLAC__StreamDecoderErrorStatusString[status]);
+    ERROR ("FLAC error: %s", FLAC__StreamDecoderErrorStatusString[status]);
 }
 
 static void free_private (InputPluginData* ip_data)
@@ -342,7 +342,7 @@ static void channel_map_init_flac(int channels, ChannelPosition* map)
     }
 }
 
-static int flac_open(InputPluginData* ip_data)
+static int flac_open (InputPluginData* ip_data)
 {
     FlacPrivate* p = NULL;
 
@@ -498,7 +498,7 @@ static int flac_duration (InputPluginData* ip_data)
 {
     FlacPrivate* p= ip_data->private;
 
-    return p->duration;
+    return (int) p->duration;
 }
 
 static long flac_bitrate (InputPluginData* ip_data)
@@ -507,7 +507,7 @@ static long flac_bitrate (InputPluginData* ip_data)
     return p->bitrate;
 }
 
-static char *flac_codec (InputPluginData* ipData)
+static char* flac_codec (InputPluginData* ipData)
 {
     (void*) ipData;
 
@@ -520,7 +520,9 @@ static char* flac_codec_profile (InputPluginData* ipData)
     return NULL;
 }
 
-const InputPluginOps  ipOps = {
+
+//
+const InputPluginOps  ops = {
     .Open = flac_open,
     .Close = flac_close,
     .Read = flac_read,
@@ -533,8 +535,21 @@ const InputPluginOps  ipOps = {
     .CodecProfile = flac_codec_profile
 };
 
-const int ipPriority = 50;
-const char * const ipExtensions[] = { "flac", "fla", NULL };
-const char * const ipMime_types[] = { NULL };
-const InputPluginOps ipOptions[] = { { NULL } };
-const unsigned ipAbiVersion = INPUT_ABI_VERSION;
+const int priority = 50;
+const char* name = "flac plugin";
+const char * const extensions[] = { "flac", "fla", NULL };
+const char * const mimeTypes[] = { NULL };
+const InputPluginOpt options[] = { { NULL } };
+const unsigned int abiVersion = INPUT_ABI_VERSION;
+
+void flac_input_register (InputPlugin* plugin)
+{
+    plugin->ops = &ops;
+    plugin->name = name;
+    plugin->option = options;
+    plugin->isExtension = false;
+    plugin->priority = priority;
+    plugin->mimeType = mimeTypes;
+    plugin->extensions = extensions;
+    plugin->abiVersion = abiVersion;
+}
