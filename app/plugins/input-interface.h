@@ -1,103 +1,91 @@
 //
-// Created by dingjing on 2/9/23.
+// Created by dingjing on 2/2/23.
 //
 
-#ifndef GRACEFUL_MUSIC_INPUT_INTERFACE_H
-#define GRACEFUL_MUSIC_INPUT_INTERFACE_H
+#ifndef GRACEFUL_MUSIC_INPUT_BASE_H
+#define GRACEFUL_MUSIC_INPUT_BASE_H
 
-#include "sf.h"
+#include "../global.h"
 #include "key-value.h"
-#include "channelmap.h"
+#include "channel-map.h"
 
 #ifndef __GNUC__
 #include <fcntl.h>
 #include <unistd.h>
 #endif
 
-#define IP_ABI_VERSION 1
+#define INPUT_ABI_VERSION                                   1
 
-enum {
-    /* no error */
-    IP_ERROR_SUCCESS,
-    /* system error (error code in errno) */
-    IP_ERROR_ERRNO,
-    /* file type not recognized */
-    IP_ERROR_UNRECOGNIZED_FILE_TYPE,
-    /* file type recognized, but not supported */
-    IP_ERROR_UNSUPPORTED_FILE_TYPE,
-    /* function not supported (usually seek) */
-    IP_ERROR_FUNCTION_NOT_SUPPORTED,
-    /* input plugin detected corrupted file */
-    IP_ERROR_FILE_FORMAT,
-    /* malformed uri */
-    IP_ERROR_INVALID_URI,
-    /* sample format not supported */
-    IP_ERROR_SAMPLE_FORMAT,
-    /* wrong disc inserted */
-    IP_ERROR_WRONG_DISC,
-    /* could not read disc */
-    IP_ERROR_NO_DISC,
-    /* error parsing response line / headers */
-    IP_ERROR_HTTP_RESPONSE,
-    /* usually 404 */
-    IP_ERROR_HTTP_STATUS,
-    /* too many redirections */
-    IP_ERROR_HTTP_REDIRECT_LIMIT,
-    /* plugin does not have this option */
-    IP_ERROR_NOT_OPTION,
-    /*  */
-    IP_ERROR_INTERNAL
+typedef struct _InputPluginOps                              InputPluginOps;
+typedef struct _InputPluginOpt                              InputPluginOpt;
+typedef struct _InputPluginData                             InputPluginData;
+
+enum
+{
+    INPUT_ERROR_SUCCESS,                                    // no error
+    INPUT_ERROR_ERRNO,                                      // system error (error code in errno)
+    INPUT_ERROR_UNRECOGNIZED_FILE_TYPE,                     // file type not recognized
+    INPUT_ERROR_UNSUPPORTED_FILE_TYPE,                      // file type recognized, but not supported
+    INPUT_ERROR_FUNCTION_NOT_SUPPORTED,                     // function not supported (usually seek)
+    INPUT_ERROR_FILE_FORMAT,                                // input plugin detected corrupted file
+    INPUT_ERROR_INVALID_URI,                                // malformed uri
+    INPUT_ERROR_SAMPLE_FORMAT,                              // sample format not supported
+    INPUT_ERROR_WRONG_DISC,                                 // wrong disc inserted
+    INPUT_ERROR_NO_DISC,                                    // could not read disc
+    INPUT_ERROR_HTTP_RESPONSE,                              // error parsing response line / headers
+    INPUT_ERROR_HTTP_STATUS,                                // usually 404
+    INPUT_ERROR_HTTP_REDIRECT_LIMIT,                        // too many redirections
+    INPUT_ERROR_NOT_OPTION,                                 // plugin does not have this option
+    INPUT_ERROR_INTERNAL                                    //
 };
 
-struct input_plugin_data {
-    /* filled by ip-layer */
-    char *filename;
-    int fd;
+struct _InputPluginData
+{
+    int                             fd;
+    char*                           fileName;
 
-    unsigned int remote : 1;
-    unsigned int metadata_changed : 1;
+    unsigned int                    remote : 1;
+    unsigned int                    metaDataChanged : 1;
 
-    /* shoutcast */
-    int counter;
-    int metaint;
-    char *metadata;
-    char *icy_name;
-    char *icy_genre;
-    char *icy_url;
+    int                             counter;
+    int                             metaInt;
 
-    /* filled by plugin */
-    sample_format_t sf;
-    channel_position_t channel_map[CHANNELS_MAX];
-    void *private;
+    char*                           metaData;
+    char*                           icyName;
+    char*                           icyGenre;
+    char*                           icyURL;
+
+    SampleFormat                    sf;
+    ChannelPosition                 channelMap[CHANNELS_MAX];
+    void*                           private;
 };
 
-struct input_plugin_ops {
-    int (*open)(struct input_plugin_data *ip_data);
-    int (*close)(struct input_plugin_data *ip_data);
-    int (*read)(struct input_plugin_data *ip_data, char *buffer, int count);
-    int (*seek)(struct input_plugin_data *ip_data, double offset);
-    int (*read_comments)(struct input_plugin_data *ip_data,
-                         struct keyval **comments);
-    int (*duration)(struct input_plugin_data *ip_data);
-    long (*bitrate)(struct input_plugin_data *ip_data);
-    long (*bitrate_current)(struct input_plugin_data *ip_data);
-    char *(*codec)(struct input_plugin_data *ip_data);
-    char *(*codec_profile)(struct input_plugin_data *ip_data);
+struct _InputPluginOps
+{
+    int     (*Open)                 (InputPluginData* data);
+    int     (*Close)                (InputPluginData* data);
+    int     (*Read)                 (InputPluginData* data, char* buffer, int count);
+    int     (*Seek)                 (InputPluginData* data, double offset);
+    int     (*ReadComments)         (InputPluginData* data, KeyValue** comments);
+    int     (*Duration)             (InputPluginData* data);
+    long    (*Bitrate)              (InputPluginData* data);
+    long    (*BitrateCurrent)       (InputPluginData* data);
+    char*   (*Codec)                (InputPluginData* data);
+    char*   (*CodecProfile)         (InputPluginData* data);
 };
 
-struct input_plugin_opt {
-    const char *name;
-    int (*set)(const char *val);
-    int (*get)(char **val);
+struct _InputPluginOpt
+{
+    const char*                     name;
+    int     (*Set)                  (const char* val);
+    int     (*Get)                  (char** val);
 };
 
-/* symbols exported by plugin */
-extern const struct input_plugin_ops ip_ops;
-extern const int ip_priority;
-extern const char * const ip_extensions[];
-extern const char * const ip_mime_types[];
-extern const struct input_plugin_opt ip_options[];
-extern const unsigned ip_abi_version;
+extern const InputPluginOps         gInputOps;
+extern const int                    gInputPriority;
+extern const char* const            gInputExtensions[];
+extern const char* const            gInputMimeTypes[];
+extern const InputPluginOpt         gInputOptions[];
+extern const unsigned               gInputVersion;
 
-
-#endif //GRACEFUL_MUSIC_INPUT_INTERFACE_H
+#endif //GRACEFUL_MUSIC_INPUT_BASE_H

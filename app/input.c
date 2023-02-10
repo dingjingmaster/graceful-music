@@ -37,8 +37,8 @@ extern const char* libDir;
 extern const char* dataDir;
 
 struct input_plugin {
-	const struct input_plugin_ops *ops;
-	struct input_plugin_data data;
+	const InputPluginOps* ops;
+	InputPluginData  data;
 	unsigned int open : 1;
 	unsigned int eof : 1;
 	int http_code;
@@ -198,10 +198,10 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 	hg->code = -1;
 	hg->fd = -1;
 	if (http_parse_uri(uri, &hg->uri))
-		return -IP_ERROR_INVALID_URI;
+		return -INPUT_ERROR_INVALID_URI;
 
 	if (http_open(hg, http_connection_timeout))
-		return -IP_ERROR_ERRNO;
+		return -INPUT_ERROR_ERRNO;
 
 	key_value_add(&h, "Host", xstrdup(hg->uri.host));
 	if (hg->proxy && hg->proxy->user && hg->proxy->pass)
@@ -216,9 +216,9 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 	key_value_free(h.keyValues);
 	switch (rc) {
 	case -1:
-		return -IP_ERROR_ERRNO;
+		return -INPUT_ERROR_ERRNO;
 	case -2:
-		return -IP_ERROR_HTTP_RESPONSE;
+		return -INPUT_ERROR_HTTP_RESPONSE;
 	}
 
 	DEBUG ("HTTP response: %d %s\n", hg->code, hg->reason);
@@ -238,11 +238,11 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 	case 307: /* Temporary Redirect */
 		val = key_value_get_value(hg->headers, "location");
 		if (!val)
-			return -IP_ERROR_HTTP_RESPONSE;
+			return -INPUT_ERROR_HTTP_RESPONSE;
 
 		redirections++;
 		if (redirections > 2)
-			return -IP_ERROR_HTTP_REDIRECT_LIMIT;
+			return -INPUT_ERROR_HTTP_REDIRECT_LIMIT;
 
 		redirloc = xstrdup(val);
 		http_get_free(hg);
@@ -253,7 +253,7 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 		free(redirloc);
 		return rc;
 	default:
-		return -IP_ERROR_HTTP_STATUS;
+		return -INPUT_ERROR_HTTP_STATUS;
 	}
 }
 
@@ -268,7 +268,7 @@ static int setup_remote(struct input_plugin *ip, const struct keyval *headers, i
 		if (ip->ops == NULL) {
 			d_print("unsupported content type: %s\n", val);
 			close(sock);
-			return -IP_ERROR_FILE_FORMAT;
+			return -INPUT_ERROR_FILE_FORMAT;
 		}
 	} else {
 		const char *type = "audio/mpeg";
@@ -276,36 +276,36 @@ static int setup_remote(struct input_plugin *ip, const struct keyval *headers, i
 		d_print("assuming %s content type\n", type);
 		ip->ops = get_ops_by_mime_type(type);
 		if (ip->ops == NULL) {
-			d_print("unsupported content type: %s\n", type);
+			DEBUG ("unsupported content type: %s", type);
 			close(sock);
-			return -IP_ERROR_FILE_FORMAT;
+			return -INPUT_ERROR_FILE_FORMAT;
 		}
 	}
 
 	ip->data.fd = sock;
-	ip->data.metadata = xnew(char, 16 * 255 + 1);
+	ip->data.metaData = xnew(char, 16 * 255 + 1);
 
 	val = key_value_get_value (headers, "icy-metaint");
 	if (val) {
 		long int lint;
 
 		if (str_to_int(val, &lint) == 0 && lint >= 0) {
-			ip->data.metaint = lint;
-			d_print("metaint: %d\n", ip->data.metaint);
+			ip->data.metaInt = lint;
+			DEBUG ("metaint: %d", ip->data.metaInt);
 		}
 	}
 
 	val = key_value_get_value (headers, "icy-name");
 	if (val)
-		ip->data.icy_name = to_utf8(val, icecast_default_charset);
+		ip->data.icyName = to_utf8(val, icecast_default_charset);
 
 	val = key_value_get_value (headers, "icy-genre");
 	if (val)
-		ip->data.icy_genre = to_utf8(val, icecast_default_charset);
+		ip->data.icyGenre = to_utf8(val, icecast_default_charset);
 
 	val = key_value_get_value (headers, "icy-url");
 	if (val)
-		ip->data.icy_url = to_utf8(val, icecast_default_charset);
+		ip->data.icyURL = to_utf8(val, icecast_default_charset);
 
 	return 0;
 }
@@ -348,25 +348,25 @@ static int read_playlist(struct input_plugin *ip, int sock)
 	body = http_read_body(sock, &size, http_read_timeout);
 	close(sock);
 	if (!body)
-		return -IP_ERROR_ERRNO;
+		return -INPUT_ERROR_ERRNO;
 
 	cmus_playlist_for_each(body, size, 0, handle_line, &rpd);
 	free(body);
 	if (!rpd.count) {
 		d_print("empty playlist\n");
-		rpd.rc = -IP_ERROR_HTTP_RESPONSE;
+		rpd.rc = -INPUT_ERROR_HTTP_RESPONSE;
 	}
 	return rpd.rc;
 }
 
 static int open_remote(struct input_plugin *ip)
 {
-	struct input_plugin_data *d = &ip->data;
+	InputPluginData* d = &ip->data;
 	struct http_get hg;
 	const char *val;
 	int rc;
 
-	rc = do_http_get(&hg, d->filename, 0);
+	rc = do_http_get(&hg, d->fileName, 0);
 	if (rc) {
 		ip->http_code = hg.code;
 		ip->http_reason = hg.reason;
@@ -402,9 +402,9 @@ static void ip_init(struct input_plugin *ip, char *filename)
 		.bitrate            = -1,
 		.data = {
 			.fd         = -1,
-			.filename   = filename,
+			.fileName   = filename,
 			.remote     = is_http_url(filename),
-			.channel_map = CHANNEL_MAP_INIT
+			.channelMap = CHANNEL_MAP_INIT
 		}
 	};
 	*ip = t;
@@ -413,8 +413,8 @@ static void ip_init(struct input_plugin *ip, char *filename)
 static void ip_reset(struct input_plugin *ip, int close_fd)
 {
 	int fd = ip->data.fd;
-	free(ip->data.metadata);
-	ip_init(ip, ip->data.filename);
+	free(ip->data.metaData);
+	ip_init(ip, ip->data.fileName);
 	if (fd != -1) {
 		if (close_fd)
 			close(fd);
@@ -432,22 +432,22 @@ static int open_file_locked(struct input_plugin *ip)
 	const char *ext;
 	int rc = 0;
 
-	ext = get_extension(ip->data.filename);
+	ext = get_extension(ip->data.fileName);
 	if (!ext)
-		return -IP_ERROR_UNRECOGNIZED_FILE_TYPE;
+		return -INPUT_ERROR_UNRECOGNIZED_FILE_TYPE;
 
 	ops = get_ops_by_extension(ext, &head);
 	if (!ops)
-		return -IP_ERROR_UNRECOGNIZED_FILE_TYPE;
+		return -INPUT_ERROR_UNRECOGNIZED_FILE_TYPE;
 
-	ip->data.fd = open(ip->data.filename, O_RDONLY);
+	ip->data.fd = open(ip->data.fileName, O_RDONLY);
 	if (ip->data.fd == -1)
-		return -IP_ERROR_ERRNO;
+		return -INPUT_ERROR_ERRNO;
 
 	while (1) {
 		ip->ops = ops;
-		rc = ip->ops->open(&ip->data);
-		if (rc != -IP_ERROR_UNSUPPORTED_FILE_TYPE)
+		rc = ip->ops->Open(&ip->data);
+		if (rc != -INPUT_ERROR_UNSUPPORTED_FILE_TYPE)
 			break;
 
 		ops = get_ops_by_extension(ext, &head);
@@ -455,7 +455,7 @@ static int open_file_locked(struct input_plugin *ip)
 			break;
 
 		ip_reset(ip, 0);
-		d_print("fallback: try next plugin for `%s'\n", ip->data.filename);
+		DEBUG ("fallback: try next plugin for `%s'\n", ip->data.fileName);
 	}
 
 	return rc;
@@ -535,7 +535,7 @@ void ip_load_plugins(void)
 			ERROR ("%s: missing symbol", filename);
 			err = true;
 		}
-		if (!abi_version_ptr || *abi_version_ptr != IP_ABI_VERSION) {
+		if (!abi_version_ptr || *abi_version_ptr != INPUT_ABI_VERSION) {
 			ERROR ("%s: incompatible plugin version", filename);
 			err = true;
 		}
@@ -571,7 +571,7 @@ void ip_delete(struct input_plugin *ip)
 {
 	if (ip->open)
 		ip_close(ip);
-	free(ip->data.filename);
+	free(ip->data.fileName);
 	free(ip);
 }
 
@@ -585,21 +585,20 @@ int ip_open(struct input_plugin *ip)
 	if (ip->data.remote) {
 		rc = open_remote(ip);
 		if (rc == 0)
-			rc = ip->ops->open(&ip->data);
+			rc = ip->ops->Open(&ip->data);
 	} else {
-		if (is_cdda_url(ip->data.filename)) {
+		if (is_cdda_url(ip->data.fileName)) {
 			ip->ops = get_ops_by_mime_type("x-content/audio-cdda");
-			rc = ip->ops ? ip->ops->open(&ip->data) : 1;
-		} else if (is_cue_url(ip->data.filename)) {
+			rc = ip->ops ? ip->ops->Open(&ip->data) : 1;
+		} else if (is_cue_url(ip->data.fileName)) {
 			ip->ops = get_ops_by_mime_type("application/x-cue");
-			rc = ip->ops ? ip->ops->open(&ip->data) : 1;
+			rc = ip->ops ? ip->ops->Open(&ip->data) : 1;
 		} else
 			rc = open_file(ip);
 	}
 
 	if (rc) {
-		d_print("opening `%s' failed: %d %s\n", ip->data.filename, rc,
-				rc == -1 ? strerror(errno) : "");
+		DEBUG ("opening `%s' failed: %d %s\n", ip->data.fileName, rc, rc == -1 ? strerror(errno) : "");
 		ip_reset(ip, 1);
 		return rc;
 	}
@@ -639,17 +638,18 @@ int ip_close(struct input_plugin *ip)
 {
 	int rc;
 
-	rc = ip->ops->close(&ip->data);
+	rc = ip->ops->Close(&ip->data);
 	BUG_ON(ip->data.private);
 	if (ip->data.fd != -1)
 		close(ip->data.fd);
-	free(ip->data.metadata);
-	free(ip->data.icy_name);
-	free(ip->data.icy_genre);
-	free(ip->data.icy_url);
+	free(ip->data.metaData);
+	free(ip->data.icyName);
+	free(ip->data.icyGenre);
+	free(ip->data.icyURL);
 	free(ip->http_reason);
 
-	ip_init(ip, ip->data.filename);
+	ip_init(ip, ip->data.fileName);
+
 	return rc;
 }
 
@@ -690,7 +690,7 @@ int ip_read(struct input_plugin *ip, char *buffer, int count)
 			count = sizeof(tmp);
 	}
 
-	rc = ip->ops->read(&ip->data, buf, count);
+	rc = ip->ops->Read(&ip->data, buf, count);
 	if (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
 		errno = EAGAIN;
 		return -1;
@@ -715,8 +715,8 @@ int ip_seek(struct input_plugin *ip, double offset)
 	int rc;
 
 	if (ip->data.remote)
-		return -IP_ERROR_FUNCTION_NOT_SUPPORTED;
-	rc = ip->ops->seek(&ip->data, offset);
+		return -INPUT_ERROR_FUNCTION_NOT_SUPPORTED;
+	rc = ip->ops->Seek(&ip->data, offset);
 	if (rc == 0)
 		ip->eof = 0;
 	return rc;
@@ -727,7 +727,7 @@ int ip_read_comments(struct input_plugin *ip, KeyValue** comments)
 	struct keyval *kv = NULL;
 	int rc;
 
-	rc = ip->ops->read_comments(&ip->data, &kv);
+	rc = ip->ops->ReadComments(&ip->data, &kv);
 
 	if (ip->data.remote) {
         GROWING_KEY_VALUES(c);
@@ -737,14 +737,14 @@ int ip_read_comments(struct input_plugin *ip, KeyValue** comments)
 			key_value_free(kv);
 		}
 
-		if (ip->data.icy_name && !key_value_get_val_growing(&c, "title"))
-			key_value_add(&c, "title", xstrdup(ip->data.icy_name));
+		if (ip->data.icyName && !key_value_get_val_growing(&c, "title"))
+			key_value_add(&c, "title", xstrdup(ip->data.icyName));
 
-		if (ip->data.icy_genre && !key_value_get_val_growing(&c, "genre"))
-			key_value_add(&c, "genre", xstrdup(ip->data.icy_genre));
+		if (ip->data.icyGenre && !key_value_get_val_growing(&c, "genre"))
+			key_value_add(&c, "genre", xstrdup(ip->data.icyGenre));
 
-		if (ip->data.icy_url && !key_value_get_val_growing(&c, "comment"))
-			key_value_add(&c, "comment", xstrdup(ip->data.icy_url));
+		if (ip->data.icyURL && !key_value_get_val_growing(&c, "comment"))
+			key_value_add(&c, "comment", xstrdup(ip->data.icyURL));
 
 		key_value_terminate(&c);
 
@@ -761,7 +761,7 @@ int ip_duration(struct input_plugin *ip)
 	if (ip->data.remote)
 		return -1;
 	if (ip->duration == -1)
-		ip->duration = ip->ops->duration(&ip->data);
+		ip->duration = ip->ops->Duration(&ip->data);
 	if (ip->duration < 0)
 		return -1;
 	return ip->duration;
@@ -772,7 +772,7 @@ int ip_bitrate(struct input_plugin *ip)
 	if (ip->data.remote)
 		return -1;
 	if (ip->bitrate == -1)
-		ip->bitrate = ip->ops->bitrate(&ip->data);
+		ip->bitrate = ip->ops->Bitrate(&ip->data);
 	if (ip->bitrate < 0)
 		return -1;
 	return ip->bitrate;
@@ -780,7 +780,7 @@ int ip_bitrate(struct input_plugin *ip)
 
 int ip_current_bitrate(struct input_plugin *ip)
 {
-	return ip->ops->bitrate_current(&ip->data);
+	return ip->ops->BitrateCurrent(&ip->data);
 }
 
 char *ip_codec(struct input_plugin *ip)
@@ -788,7 +788,8 @@ char *ip_codec(struct input_plugin *ip)
 	if (ip->data.remote)
 		return NULL;
 	if (!ip->codec)
-		ip->codec = ip->ops->codec(&ip->data);
+		ip->codec = ip->ops->Codec(&ip->data);
+
 	return ip->codec;
 }
 
@@ -797,7 +798,7 @@ char *ip_codec_profile(struct input_plugin *ip)
 	if (ip->data.remote)
 		return NULL;
 	if (!ip->codec_profile)
-		ip->codec_profile = ip->ops->codec_profile(&ip->data);
+		ip->codec_profile = ip->ops->CodecProfile(&ip->data);
 	return ip->codec_profile;
 }
 
@@ -807,21 +808,21 @@ sample_format_t ip_get_sf(struct input_plugin *ip)
 	return ip->data.sf;
 }
 
-void ip_get_channel_map(struct input_plugin *ip, channel_position_t *channel_map)
+void ip_get_channel_map(struct input_plugin *ip, ChannelPosition* channel_map)
 {
 	BUG_ON(!ip->open);
-	channel_map_copy(channel_map, ip->data.channel_map);
+	channel_map_copy(channel_map, ip->data.channelMap);
 }
 
 const char *ip_get_filename(struct input_plugin *ip)
 {
-	return ip->data.filename;
+	return ip->data.fileName;
 }
 
 const char *ip_get_metadata(struct input_plugin *ip)
 {
 	BUG_ON(!ip->open);
-	return ip->data.metadata;
+	return ip->data.metaData;
 }
 
 int ip_is_remote(struct input_plugin *ip)
@@ -831,10 +832,10 @@ int ip_is_remote(struct input_plugin *ip)
 
 int ip_metadata_changed(struct input_plugin *ip)
 {
-	int ret = ip->data.metadata_changed;
+	int ret = ip->data.metaDataChanged;
 
 	BUG_ON(!ip->open);
-	ip->data.metadata_changed = 0;
+	ip->data.metaDataChanged = 0;
 	return ret;
 }
 
@@ -853,20 +854,20 @@ static void option_error(int rc)
 
 static void set_ip_option(void *data, const char *val)
 {
-	const struct input_plugin_opt *ipo = data;
+	const InputPluginOpt* ipo = data;
 	int rc;
 
-	rc = ipo->set(val);
+	rc = ipo->Set(val);
 	if (rc)
 		option_error(rc);
 }
 
 static void get_ip_option(void *data, char *buf, size_t size)
 {
-	const struct input_plugin_opt *ipo = data;
+	const InputPluginOpt* ipo = data;
 	char *val = NULL;
 
-	ipo->get(&val);
+	ipo->Get(&val);
 	if (val) {
 		strscpy(buf, val, size);
 		free(val);
@@ -895,7 +896,7 @@ static void set_ip_priority(void *data, const char *val)
 			}
 			warned = true;
 		}
-		info_msg("Run \":update-cache -f\" to refresh the metadata.");
+		INFO ("Run \":update-cache -f\" to refresh the metadata.");
 	}
 
 	ip_wrlock();
@@ -915,16 +916,14 @@ static void get_ip_priority(void *data, char *val, size_t size)
 void ip_add_options(void)
 {
 	struct ip *ip;
-	const struct input_plugin_opt *ipo;
+	const InputPluginOpt* ipo;
 	char key[64];
 
 	ip_rdlock();
 	list_for_each_entry(ip, &ip_head, node) {
 		for (ipo = ip->options; ipo->name; ipo++) {
-			snprintf(key, sizeof(key), "input.%s.%s", ip->name,
-					ipo->name);
-			option_add(xstrdup(key), ipo, get_ip_option,
-					set_ip_option, NULL, 0);
+			snprintf(key, sizeof(key), "input.%s.%s", ip->name, ipo->name);
+			option_add(xstrdup(key), ipo, get_ip_option, set_ip_option, NULL, 0);
 		}
 		snprintf(key, sizeof(key), "input.%s.priority", ip->name);
 		option_add(xstrdup(key), ip, get_ip_priority, set_ip_priority, NULL, 0);
@@ -937,60 +936,60 @@ char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg)
 	char buffer[1024];
 
 	switch (-rc) {
-	case IP_ERROR_ERRNO:
+	case INPUT_ERROR_ERRNO:
 		snprintf(buffer, sizeof(buffer), "%s: %s", arg, strerror(errno));
 		break;
-	case IP_ERROR_UNRECOGNIZED_FILE_TYPE:
+	case INPUT_ERROR_UNRECOGNIZED_FILE_TYPE:
 		snprintf(buffer, sizeof(buffer),
 				"%s: unrecognized filename extension", arg);
 		break;
-	case IP_ERROR_UNSUPPORTED_FILE_TYPE:
+	case INPUT_ERROR_UNSUPPORTED_FILE_TYPE:
 		snprintf(buffer, sizeof(buffer),
 				"%s: unsupported file format", arg);
 		break;
-	case IP_ERROR_FUNCTION_NOT_SUPPORTED:
+	case INPUT_ERROR_FUNCTION_NOT_SUPPORTED:
 		snprintf(buffer, sizeof(buffer),
 				"%s: function not supported", arg);
 		break;
-	case IP_ERROR_FILE_FORMAT:
+	case INPUT_ERROR_FILE_FORMAT:
 		snprintf(buffer, sizeof(buffer),
 				"%s: file format not supported or corrupted file",
 				arg);
 		break;
-	case IP_ERROR_INVALID_URI:
+	case INPUT_ERROR_INVALID_URI:
 		snprintf(buffer, sizeof(buffer), "%s: invalid URI", arg);
 		break;
-	case IP_ERROR_SAMPLE_FORMAT:
+	case INPUT_ERROR_SAMPLE_FORMAT:
 		snprintf(buffer, sizeof(buffer),
 				"%s: input plugin doesn't support the sample format",
 				arg);
 		break;
-	case IP_ERROR_WRONG_DISC:
+	case INPUT_ERROR_WRONG_DISC:
 		snprintf(buffer, sizeof(buffer), "%s: wrong disc inserted, aborting!", arg);
 		break;
-	case IP_ERROR_NO_DISC:
+	case INPUT_ERROR_NO_DISC:
 		snprintf(buffer, sizeof(buffer), "%s: could not read disc", arg);
 		break;
-	case IP_ERROR_HTTP_RESPONSE:
+	case INPUT_ERROR_HTTP_RESPONSE:
 		snprintf(buffer, sizeof(buffer), "%s: invalid HTTP response", arg);
 		break;
-	case IP_ERROR_HTTP_STATUS:
+	case INPUT_ERROR_HTTP_STATUS:
 		snprintf(buffer, sizeof(buffer), "%s: %d %s", arg, ip->http_code, ip->http_reason);
 		free(ip->http_reason);
 		ip->http_reason = NULL;
 		ip->http_code = -1;
 		break;
-	case IP_ERROR_HTTP_REDIRECT_LIMIT:
+	case INPUT_ERROR_HTTP_REDIRECT_LIMIT:
 		snprintf(buffer, sizeof(buffer), "%s: too many HTTP redirections", arg);
 		break;
-	case IP_ERROR_NOT_OPTION:
+	case INPUT_ERROR_NOT_OPTION:
 		snprintf(buffer, sizeof(buffer),
 				"%s: no such option", arg);
 		break;
-	case IP_ERROR_INTERNAL:
+	case INPUT_ERROR_INTERNAL:
 		snprintf(buffer, sizeof(buffer), "%s: internal error", arg);
 		break;
-	case IP_ERROR_SUCCESS:
+	case INPUT_ERROR_SUCCESS:
 	default:
 		snprintf(buffer, sizeof(buffer),
 				"%s: this is not an error (%d), this is a bug",

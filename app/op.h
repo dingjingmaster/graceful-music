@@ -2,7 +2,7 @@
 #define CMUS_OP_H
 
 #include "sf.h"
-#include "channelmap.h"
+#include "channel-map.h"
 
 #ifndef __GNUC__
 #include <fcntl.h>
@@ -34,7 +34,7 @@ enum {
 struct output_plugin_ops {
 	int (*init)(void);
 	int (*exit)(void);
-	int (*open)(sample_format_t sf, const channel_position_t *channel_map);
+	int (*open)(sample_format_t sf, const ChannelPosition* channelMap);
 	int (*close)(void);
 	int (*drop)(void);
 	int (*write)(const char *buffer, int count);

@@ -251,7 +251,7 @@ int op_select_any(void)
 	return rc;
 }
 
-int op_open(sample_format_t sf, const channel_position_t *channel_map)
+int op_open(sample_format_t sf, const ChannelPosition* channel_map)
 {
 	if (op == NULL)
 		return -OP_ERROR_NOT_INITIALIZED;
