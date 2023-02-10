@@ -7,86 +7,84 @@
 #include "log.h"
 #include "pcm.h"
 #include "http.h"
-#include "xmalloc.h"
-#include "convert.h"
-#include "input-interface.h"
-
 #include "file.h"
-#include "path.h"
-#include "utils.h"
 #include "cmus.h"
-#include "options.h"
+#include "path.h"
 #include "list.h"
-#include "mergesort.h"
 #include "misc.h"
 #include "debug.h"
-#include "ui_curses.h"
+#include "utils.h"
+#include "options.h"
 #include "locking.h"
+#include "xmalloc.h"
+#include "convert.h"
 #include "xstrjoin.h"
+#include "ui_curses.h"
+#include "mergesort.h"
+#include "input-interface.h"
 
-#include <unistd.h>
-#include <stdbool.h>
-#include <string.h>
+#include <dlfcn.h>
 #include <errno.h>
 #include <stdio.h>
-#include <stdarg.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
-#include <dlfcn.h>
+#include <string.h>
+#include <stdarg.h>
+#include <unistd.h>
 #include <strings.h>
+#include <stdbool.h>
+#include <sys/time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/select.h>
 
+
+typedef struct _Input                   Input;
 
 
 // FIXME:// DJ- 后续要修改
 extern const char* libDir;
 extern const char* dataDir;
 
-struct input_plugin
+struct _InputPlugin
 {
-    const InputPluginOps* ops;
-    InputPluginData  data;
-    unsigned int open : 1;
-    unsigned int eof : 1;
-    int http_code;
-    char *http_reason;
+    const InputPluginOps*               ops;
+    InputPluginData                     data;
+    unsigned int                        open : 1;
+    unsigned int                        eof : 1;
+    int                                 httpCode;
+    char*                               httpReason;
 
-    /* cached duration, -1 = unset */
-    int duration;
-    /* cached bitrate, -1 = unset */
-    long bitrate;
-    /* cached codec, NULL = unset */
-    char *codec;
-    /* cached codec_profile, NULL = unset */
-    char *codec_profile;
+    int                                 duration;       // cached duration, -1 = unset
+    long                                bitrate;        // cached bitrate, -1 = unset
+    char*                               codec;          // cached codec, NULL = unset
+    char*                               codecProfile;   // cached codec_profile, NULL = unset
 
     /*
      * pcm is converted to 16-bit signed little-endian stereo
      * NOTE: no conversion is done if channels > 2 or bits > 16
      */
-    void (*pcm_convert)(void *, const void *, int);
-    void (*pcm_convert_in_place)(void *, int);
+    void (*PcmConvert)          (void*, const void*, int);
+    void (*PcmConvertInPlace)   (void*, int);
     /*
      * 4  if 8-bit mono
      * 2  if 8-bit stereo or 16-bit mono
      * 1  otherwise
      */
-    int pcm_convert_scale;
+    int                                 pcmConvertScale;
 };
 
-struct ip {
+struct _Input
+{
     struct list_head node;
-    char *name;
-    void *handle;
+    char*                               name;
+    void*                               handle;
 
-    int priority;
-    const char * const *extensions;
-    const char * const *mime_types;
-    const struct input_plugin_ops *ops;
-    const struct input_plugin_opt *options;
+    int                                 priority;
+    const char* const*                  extensions;
+    const char* const*                  mimeTypes;
+    const InputPluginOps*               ops;
+    const InputPluginOpt*               options;
 };
 
 static const char* pluginDir;
@@ -109,13 +107,12 @@ static const char *pl_mime_types[] = {
     "audio/x-mpegurl"
 };
 
-static const struct input_plugin_ops *
-get_ops_by_extension_locked(const char *ext, struct list_head **headp)
+static const InputPluginOps* get_ops_by_extension_locked(const char *ext, struct list_head **headp)
 {
     struct list_head *node = *headp;
 
     for (node = node->next; node != &ip_head; node = node->next) {
-        struct ip *ip = list_entry(node, struct ip, node);
+        Input* ip = list_entry (node, Input, node);
         const char * const *exts = ip->extensions;
         int i;
 
@@ -133,23 +130,20 @@ get_ops_by_extension_locked(const char *ext, struct list_head **headp)
     return NULL;
 }
 
-static const struct input_plugin_ops *
-get_ops_by_extension(const char *ext, struct list_head **headp)
+static const InputPluginOps* get_ops_by_extension(const char *ext, struct list_head **headp)
 {
     ip_rdlock();
-    const struct input_plugin_ops *rv = get_ops_by_extension_locked(ext,
-                                                                    headp);
+    const InputPluginOps* rv = get_ops_by_extension_locked(ext, headp);
     ip_unlock();
     return rv;
 }
 
-static const struct input_plugin_ops *
-get_ops_by_mime_type_locked(const char *mime_type)
+static const InputPluginOps* get_ops_by_mime_type_locked(const char *mime_type)
 {
-    struct ip *ip;
+    Input* ip;
 
     list_for_each_entry(ip, &ip_head, node) {
-        const char * const *types = ip->mime_types;
+        const char * const *types = ip->mimeTypes;
         int i;
 
         if (ip->priority <= 0) {
@@ -164,11 +158,11 @@ get_ops_by_mime_type_locked(const char *mime_type)
     return NULL;
 }
 
-static const struct input_plugin_ops *
+static const InputPluginOps*
 get_ops_by_mime_type(const char *mime_type)
 {
     ip_rdlock();
-    const struct input_plugin_ops *rv =
+    const InputPluginOps* rv =
         get_ops_by_mime_type_locked(mime_type);
     ip_unlock();
     return rv;
@@ -267,7 +261,7 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
     }
 }
 
-static int setup_remote(struct input_plugin *ip, const struct keyval *headers, int sock)
+static int setup_remote(InputPlugin* ip, const struct keyval *headers, int sock)
 {
     const char *val;
 
@@ -321,7 +315,7 @@ static int setup_remote(struct input_plugin *ip, const struct keyval *headers, i
 }
 
 struct read_playlist_data {
-    struct input_plugin *ip;
+    InputPlugin* ip;
     int rc;
     int count;
 };
@@ -334,8 +328,8 @@ static int handle_line(void *data, const char *uri)
     rpd->count++;
     rpd->rc = do_http_get(&hg, uri, 0);
     if (rpd->rc) {
-        rpd->ip->http_code = hg.code;
-        rpd->ip->http_reason = hg.reason;
+        rpd->ip->httpCode = hg.code;
+        rpd->ip->httpReason = hg.reason;
         if (hg.fd >= 0)
             close(hg.fd);
 
@@ -349,7 +343,7 @@ static int handle_line(void *data, const char *uri)
     return 1;
 }
 
-static int read_playlist(struct input_plugin *ip, int sock)
+static int read_playlist(InputPlugin* ip, int sock)
 {
     struct read_playlist_data rpd = { ip, 0, 0 };
     char *body;
@@ -369,7 +363,7 @@ static int read_playlist(struct input_plugin *ip, int sock)
     return rpd.rc;
 }
 
-static int open_remote(struct input_plugin *ip)
+static int open_remote(InputPlugin* ip)
 {
     InputPluginData* d = &ip->data;
     struct http_get hg;
@@ -378,8 +372,8 @@ static int open_remote(struct input_plugin *ip)
 
     rc = do_http_get(&hg, d->fileName, 0);
     if (rc) {
-        ip->http_code = hg.code;
-        ip->http_reason = hg.reason;
+        ip->httpCode = hg.code;
+        ip->httpReason = hg.reason;
         hg.reason = NULL;
         http_get_free(&hg);
         return rc;
@@ -403,11 +397,11 @@ static int open_remote(struct input_plugin *ip)
     return rc;
 }
 
-static void ip_init(struct input_plugin *ip, char *filename)
+static void ip_init(InputPlugin* ip, char *filename)
 {
-    const struct input_plugin t = {
-        .http_code          = -1,
-        .pcm_convert_scale  = -1,
+    const InputPlugin t = {
+        .httpCode           = -1,
+        .pcmConvertScale    = -1,
         .duration           = -1,
         .bitrate            = -1,
         .data = {
@@ -420,7 +414,7 @@ static void ip_init(struct input_plugin *ip, char *filename)
     *ip = t;
 }
 
-static void ip_reset(struct input_plugin *ip, int close_fd)
+static void ip_reset(InputPlugin* ip, int close_fd)
 {
     int fd = ip->data.fd;
     free(ip->data.metaData);
@@ -435,9 +429,9 @@ static void ip_reset(struct input_plugin *ip, int close_fd)
     }
 }
 
-static int open_file_locked(struct input_plugin *ip)
+static int open_file_locked(InputPlugin* ip)
 {
-    const struct input_plugin_ops *ops;
+    const InputPluginOps* ops;
     struct list_head *head = &ip_head;
     const char *ext;
     int rc = 0;
@@ -471,7 +465,7 @@ static int open_file_locked(struct input_plugin *ip)
     return rc;
 }
 
-static int open_file(struct input_plugin *ip)
+static int open_file(InputPlugin* ip)
 {
     ip_rdlock();
     int rv = open_file_locked(ip);
@@ -481,8 +475,8 @@ static int open_file(struct input_plugin *ip)
 
 static int sort_ip(const struct list_head *a_, const struct list_head *b_)
 {
-    const struct ip *a = list_entry(a_, struct ip, node);
-    const struct ip *b = list_entry(b_, struct ip, node);
+    const Input* a = list_entry(a_, Input, node);
+    const Input* b = list_entry(b_, Input, node);
     return b->priority - a->priority;
 }
 
@@ -501,7 +495,7 @@ void ip_load_plugins(void)
     ip_wrlock();
     while (NULL != (d = (struct dirent *) readdir (dir))) {
         char filename[512] = {0};
-        struct ip *ip;
+        Input* ip;
         void *so;
         char *ext;
         const int *priority_ptr;
@@ -533,16 +527,16 @@ void ip_load_plugins(void)
             continue;
         }
 
-        ip = xnew(struct ip, 1);
+        ip = xnew (Input, 1);
 
         // FIXME:// DJ- 这些符号已废弃
         abi_version_ptr = dlsym(so, "ip_abi_version");
         priority_ptr = dlsym(so, "ip_priority");
         ip->extensions = dlsym(so, "ip_extensions");
-        ip->mime_types = dlsym(so, "ip_mime_types");
+        ip->mimeTypes = dlsym(so, "ip_mime_types");
         ip->ops = dlsym(so, "ip_ops");
         ip->options = dlsym(so, "ip_options");
-        if (!priority_ptr || !ip->extensions || !ip->mime_types || !ip->ops || !ip->options) {
+        if (!priority_ptr || !ip->extensions || !ip->mimeTypes || !ip->ops || !ip->options) {
             ERROR ("%s: missing symbol", filename);
             err = true;
         }
@@ -570,15 +564,15 @@ void ip_load_plugins(void)
     ip_unlock();
 }
 
-struct input_plugin *ip_new(const char *filename)
+InputPlugin* ip_new(const char *filename)
 {
-    struct input_plugin *ip = xnew(struct input_plugin, 1);
+    InputPlugin* ip = xnew(InputPlugin, 1);
 
     ip_init(ip, xstrdup(filename));
     return ip;
 }
 
-void ip_delete(struct input_plugin *ip)
+void ip_delete(InputPlugin* ip)
 {
     if (ip->open)
         ip_close(ip);
@@ -586,7 +580,7 @@ void ip_delete(struct input_plugin *ip)
     free(ip);
 }
 
-int ip_open(struct input_plugin *ip)
+int ip_open(InputPlugin* ip)
 {
     int rc;
 
@@ -617,7 +611,7 @@ int ip_open(struct input_plugin *ip)
     return 0;
 }
 
-void ip_setup(struct input_plugin *ip)
+void ip_setup(InputPlugin* ip)
 {
     unsigned int bits, is_signed, channels;
     sample_format_t sf = ip->data.sf;
@@ -626,26 +620,26 @@ void ip_setup(struct input_plugin *ip)
     is_signed = sf_get_signed(sf);
     channels = sf_get_channels(sf);
 
-    ip->pcm_convert_scale = 1;
-    ip->pcm_convert = NULL;
-    ip->pcm_convert_in_place = NULL;
+    ip->pcmConvertScale = 1;
+    ip->PcmConvert = NULL;
+    ip->PcmConvertInPlace = NULL;
 
     if (bits <= 16 && channels <= 2) {
         unsigned int mask = ((bits >> 2) & 4) | (is_signed << 1);
 
-        ip->pcm_convert = pcm_conv[mask | (channels - 1)];
-        ip->pcm_convert_in_place = pcm_conv_in_place[mask | sf_get_bigendian(sf)];
+        ip->PcmConvert = pcm_conv[mask | (channels - 1)];
+        ip->PcmConvertInPlace = pcm_conv_in_place[mask | sf_get_bigendian(sf)];
 
-        ip->pcm_convert_scale = (3 - channels) * (3 - bits / 8);
+        ip->pcmConvertScale = (3 - channels) * (3 - bits / 8);
     }
 
     d_print("pcm convert: scale=%d convert=%d convert_in_place=%d\n",
-            ip->pcm_convert_scale,
-            ip->pcm_convert != NULL,
-            ip->pcm_convert_in_place != NULL);
+            ip->pcmConvertScale,
+            ip->PcmConvert != NULL,
+            ip->PcmConvertInPlace != NULL);
 }
 
-int ip_close(struct input_plugin *ip)
+int ip_close(InputPlugin* ip)
 {
     int rc;
 
@@ -657,14 +651,14 @@ int ip_close(struct input_plugin *ip)
     free(ip->data.icyName);
     free(ip->data.icyGenre);
     free(ip->data.icyURL);
-    free(ip->http_reason);
+    free(ip->httpReason);
 
     ip_init(ip, ip->data.fileName);
 
     return rc;
 }
 
-int ip_read(struct input_plugin *ip, char *buffer, int count)
+int ip_read(InputPlugin* ip, char *buffer, int count)
 {
     struct timeval tv;
     fd_set readfds;
@@ -693,10 +687,10 @@ int ip_read(struct input_plugin *ip, char *buffer, int count)
     }
 
     buf = buffer;
-    if (ip->pcm_convert_scale > 1) {
+    if (ip->pcmConvertScale > 1) {
         /* use tmp buffer for 16-bit mono and 8-bit */
         buf = tmp;
-        count /= ip->pcm_convert_scale;
+        count /= ip->pcmConvertScale;
         if (count > sizeof(tmp))
             count = sizeof(tmp);
     }
@@ -714,14 +708,14 @@ int ip_read(struct input_plugin *ip, char *buffer, int count)
     BUG_ON(rc % sf_get_frame_size(ip->data.sf) != 0);
 
     sample_size = sf_get_sample_size(ip->data.sf);
-    if (ip->pcm_convert_in_place != NULL)
-        ip->pcm_convert_in_place(buf, rc / sample_size);
-    if (ip->pcm_convert != NULL)
-        ip->pcm_convert(buffer, tmp, rc / sample_size);
-    return rc * ip->pcm_convert_scale;
+    if (ip->PcmConvertInPlace != NULL)
+        ip->PcmConvertInPlace(buf, rc / sample_size);
+    if (ip->PcmConvert != NULL)
+        ip->PcmConvert(buffer, tmp, rc / sample_size);
+    return rc * ip->pcmConvertScale;
 }
 
-int ip_seek(struct input_plugin *ip, double offset)
+int ip_seek(InputPlugin* ip, double offset)
 {
     int rc;
 
@@ -733,7 +727,7 @@ int ip_seek(struct input_plugin *ip, double offset)
     return rc;
 }
 
-int ip_read_comments(struct input_plugin *ip, KeyValue** comments)
+int ip_read_comments(InputPlugin* ip, KeyValue** comments)
 {
     struct keyval *kv = NULL;
     int rc;
@@ -767,7 +761,7 @@ int ip_read_comments(struct input_plugin *ip, KeyValue** comments)
     return ip->data.remote ? 0 : rc;
 }
 
-int ip_duration(struct input_plugin *ip)
+int ip_duration(InputPlugin* ip)
 {
     if (ip->data.remote)
         return -1;
@@ -778,7 +772,7 @@ int ip_duration(struct input_plugin *ip)
     return ip->duration;
 }
 
-int ip_bitrate(struct input_plugin *ip)
+int ip_bitrate(InputPlugin* ip)
 {
     if (ip->data.remote)
         return -1;
@@ -789,12 +783,12 @@ int ip_bitrate(struct input_plugin *ip)
     return ip->bitrate;
 }
 
-int ip_current_bitrate(struct input_plugin *ip)
+int ip_current_bitrate(InputPlugin* ip)
 {
     return ip->ops->BitrateCurrent(&ip->data);
 }
 
-char *ip_codec(struct input_plugin *ip)
+char *ip_codec(InputPlugin* ip)
 {
     if (ip->data.remote)
         return NULL;
@@ -804,44 +798,44 @@ char *ip_codec(struct input_plugin *ip)
     return ip->codec;
 }
 
-char *ip_codec_profile(struct input_plugin *ip)
+char *ip_codec_profile(InputPlugin* ip)
 {
     if (ip->data.remote)
         return NULL;
-    if (!ip->codec_profile)
-        ip->codec_profile = ip->ops->CodecProfile(&ip->data);
-    return ip->codec_profile;
+    if (!ip->codecProfile)
+        ip->codecProfile = ip->ops->CodecProfile(&ip->data);
+    return ip->codecProfile;
 }
 
-sample_format_t ip_get_sf(struct input_plugin *ip)
+sample_format_t ip_get_sf(InputPlugin* ip)
 {
     BUG_ON(!ip->open);
     return ip->data.sf;
 }
 
-void ip_get_channel_map(struct input_plugin *ip, ChannelPosition* channel_map)
+void ip_get_channel_map(InputPlugin* ip, ChannelPosition* channel_map)
 {
     BUG_ON(!ip->open);
     channel_map_copy(channel_map, ip->data.channelMap);
 }
 
-const char *ip_get_filename(struct input_plugin *ip)
+const char *ip_get_filename(InputPlugin* ip)
 {
     return ip->data.fileName;
 }
 
-const char *ip_get_metadata(struct input_plugin *ip)
+const char *ip_get_metadata(InputPlugin* ip)
 {
     BUG_ON(!ip->open);
     return ip->data.metaData;
 }
 
-int ip_is_remote(struct input_plugin *ip)
+int ip_is_remote(InputPlugin* ip)
 {
     return ip->data.remote;
 }
 
-int ip_metadata_changed(struct input_plugin *ip)
+int ip_metadata_changed(InputPlugin* ip)
 {
     int ret = ip->data.metaDataChanged;
 
@@ -850,7 +844,7 @@ int ip_metadata_changed(struct input_plugin *ip)
     return ret;
 }
 
-int ip_eof(struct input_plugin *ip)
+int ip_eof(InputPlugin* ip)
 {
     BUG_ON(!ip->open);
     return ip->eof;
@@ -890,7 +884,7 @@ static void set_ip_priority(void *data, const char *val)
     /* warn only once during the lifetime of the program. */
     static bool warned = false;
     long tmp;
-    struct ip *ip = data;
+    Input* ip = data;
 
     if (str_to_int(val, &tmp) == -1 || tmp < 0 || (long)(int)tmp != tmp) {
         error_msg("non-negative integer expected");
@@ -918,7 +912,7 @@ static void set_ip_priority(void *data, const char *val)
 
 static void get_ip_priority(void *data, char *val, size_t size)
 {
-    const struct ip *ip = data;
+    const Input* ip = data;
     ip_rdlock();
     snprintf(val, size, "%d", ip->priority);
     ip_unlock();
@@ -926,7 +920,7 @@ static void get_ip_priority(void *data, char *val, size_t size)
 
 void ip_add_options(void)
 {
-    struct ip *ip;
+    Input* ip;
     const InputPluginOpt* ipo;
     char key[64];
 
@@ -942,7 +936,7 @@ void ip_add_options(void)
     ip_unlock();
 }
 
-char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg)
+char *ip_get_error_msg(InputPlugin* ip, int rc, const char *arg)
 {
     char buffer[1024];
 
@@ -985,10 +979,10 @@ char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg)
             snprintf(buffer, sizeof(buffer), "%s: invalid HTTP response", arg);
             break;
         case INPUT_ERROR_HTTP_STATUS:
-            snprintf(buffer, sizeof(buffer), "%s: %d %s", arg, ip->http_code, ip->http_reason);
-            free(ip->http_reason);
-            ip->http_reason = NULL;
-            ip->http_code = -1;
+            snprintf(buffer, sizeof(buffer), "%s: %d %s", arg, ip->httpCode, ip->httpReason);
+            free(ip->httpReason);
+            ip->httpReason = NULL;
+            ip->httpCode = -1;
             break;
         case INPUT_ERROR_HTTP_REDIRECT_LIMIT:
             snprintf(buffer, sizeof(buffer), "%s: too many HTTP redirections", arg);
@@ -1012,7 +1006,7 @@ char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg)
 
 char **ip_get_supported_extensions(void)
 {
-    struct ip *ip;
+    Input* ip;
     char **exts;
     int i, size;
     int count = 0;
@@ -1039,7 +1033,7 @@ char **ip_get_supported_extensions(void)
 
 void ip_dump_plugins(void)
 {
-    struct ip *ip;
+    Input* ip;
     int i;
 
     printf("Input Plugins: %s", pluginDir);
@@ -1049,8 +1043,8 @@ void ip_dump_plugins(void)
         for (i = 0; ip->extensions[i]; i++)
             printf(" %s", ip->extensions[i]);
         printf("\n    MIME Types:");
-        for (i = 0; ip->mime_types[i]; i++)
-            printf(" %s", ip->mime_types[i]);
+        for (i = 0; ip->mimeTypes[i]; i++)
+            printf(" %s", ip->mimeTypes[i]);
         printf("\n");
     }
     ip_unlock();

@@ -89,4 +89,15 @@ void global_value_init ()
     if (g_mkdir_with_parents (gPlaylistDir, 0755)) {
         DIE_BEFORE_LOG_INIT ("create config dir: '%s' error, '%s'", gPlaylistDir, g_strerror (errno));
     }
+
+    // 其它复杂结构
+    gInputPlugins = g_malloc0 (sizeof (InputPlugins));
+    if (!gInputPlugins) {
+        DIE_BEFORE_LOG_INIT ("InputPlugin malloc error, '%s'", g_strerror (errno));
+    }
+
+    gInputPlugins->pluginIndex = g_hash_table_new (g_str_hash, g_str_equal);
+    if (!gInputPlugins->pluginIndex) {
+        DIE_BEFORE_LOG_INIT ("InputPlugin.pluginIndex init error, '%s'", g_strerror(errno));
+    }
 }

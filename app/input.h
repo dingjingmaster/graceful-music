@@ -9,7 +9,7 @@
 #include "key-value.h"
 #include "channel-map.h"
 
-struct input_plugin;
+typedef struct _InputPlugin         InputPlugin;
 
 void ip_load_plugins(void);
 
@@ -17,55 +17,55 @@ void ip_load_plugins(void);
  * allocates new struct input_plugin.
  * never fails. does not check if the file is really playable
  */
-struct input_plugin *ip_new(const char *filename);
+InputPlugin* ip_new(const char *filename);
 
 /*
  * frees struct input_plugin closing it first if necessary
  */
-void ip_delete(struct input_plugin *ip);
+void ip_delete(InputPlugin* ip);
 
 /*
  * errors: IP_ERROR_{ERRNO, FILE_FORMAT, SAMPLE_FORMAT}
  */
-int ip_open(struct input_plugin *ip);
+int ip_open(InputPlugin* ip);
 
-void ip_setup(struct input_plugin *ip);
+void ip_setup(InputPlugin* ip);
 
 /*
  * errors: none?
  */
-int ip_close(struct input_plugin *ip);
+int ip_close(InputPlugin* ip);
 
 /*
  * errors: IP_ERROR_{ERRNO, FILE_FORMAT}
  */
-int ip_read(struct input_plugin *ip, char *buffer, int count);
+int ip_read(InputPlugin* ip, char *buffer, int count);
 
 /*
  * errors: IP_ERROR_{FUNCTION_NOT_SUPPORTED}
  */
-int ip_seek(struct input_plugin *ip, double offset);
+int ip_seek(InputPlugin* ip, double offset);
 
 /*
  * errors: IP_ERROR_{ERRNO}
  */
-int ip_read_comments(struct input_plugin *ip, KeyValue** comments);
+int ip_read_comments(InputPlugin* ip, KeyValue** comments);
 
-int ip_duration(struct input_plugin *ip);
-int ip_bitrate(struct input_plugin *ip);
-int ip_current_bitrate(struct input_plugin *ip);
-char *ip_codec(struct input_plugin *ip);
-char *ip_codec_profile(struct input_plugin *ip);
+int ip_duration(InputPlugin* ip);
+int ip_bitrate(InputPlugin* ip);
+int ip_current_bitrate(InputPlugin* ip);
+char *ip_codec(InputPlugin* ip);
+char *ip_codec_profile(InputPlugin* ip);
 
-sample_format_t ip_get_sf(struct input_plugin *ip);
-void ip_get_channel_map(struct input_plugin *ip, ChannelPosition* channelMap);
-const char *ip_get_filename(struct input_plugin *ip);
-const char *ip_get_metadata(struct input_plugin *ip);
-int ip_is_remote(struct input_plugin *ip);
-int ip_metadata_changed(struct input_plugin *ip);
-int ip_eof(struct input_plugin *ip);
+sample_format_t ip_get_sf(InputPlugin* ip);
+void ip_get_channel_map(InputPlugin* ip, ChannelPosition* channelMap);
+const char *ip_get_filename(InputPlugin* ip);
+const char *ip_get_metadata(InputPlugin* ip);
+int ip_is_remote(InputPlugin* ip);
+int ip_metadata_changed(InputPlugin* ip);
+int ip_eof(InputPlugin* ip);
 void ip_add_options(void);
-char *ip_get_error_msg(struct input_plugin *ip, int rc, const char *arg);
+char *ip_get_error_msg(InputPlugin* ip, int rc, const char *arg);
 char **ip_get_supported_extensions(void);
 void ip_dump_plugins(void);
 
