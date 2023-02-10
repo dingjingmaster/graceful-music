@@ -620,10 +620,7 @@ void ip_setup(InputPlugin* ip)
         ip->pcmConvertScale = (3 - channels) * (3 - bits / 8);
     }
 
-    d_print("pcm convert: scale=%d convert=%d convert_in_place=%d\n",
-            ip->pcmConvertScale,
-            ip->PcmConvert != NULL,
-            ip->PcmConvertInPlace != NULL);
+    DEBUG ("pcm convert: scale=%d convert=%d convert_in_place=%d", ip->pcmConvertScale, ip->PcmConvert != NULL, ip->PcmConvertInPlace != NULL);
 }
 
 int ip_close(InputPlugin* ip)
@@ -632,8 +629,9 @@ int ip_close(InputPlugin* ip)
 
     rc = ip->ops->Close(&ip->data);
     BUG_ON(ip->data.private);
-    if (ip->data.fd != -1)
+    if (ip->data.fd != -1) {
         close(ip->data.fd);
+    }
     free(ip->data.metaData);
     free(ip->data.icyName);
     free(ip->data.icyGenre);
@@ -664,8 +662,9 @@ int ip_read(InputPlugin* ip, char *buffer, int count)
     tv.tv_usec = 50e3;
     rc = select(ip->data.fd + 1, &readfds, NULL, NULL, &tv);
     if (rc == -1) {
-        if (errno == EINTR)
+        if (errno == EINTR) {
             errno = EAGAIN;
+        }
         return -1;
     }
     if (rc == 0) {
@@ -678,8 +677,9 @@ int ip_read(InputPlugin* ip, char *buffer, int count)
         /* use tmp buffer for 16-bit mono and 8-bit */
         buf = tmp;
         count /= ip->pcmConvertScale;
-        if (count > sizeof(tmp))
+        if (count > sizeof(tmp)) {
             count = sizeof(tmp);
+        }
     }
 
     rc = ip->ops->Read(&ip->data, buf, count);
@@ -695,22 +695,29 @@ int ip_read(InputPlugin* ip, char *buffer, int count)
     BUG_ON(rc % sf_get_frame_size(ip->data.sf) != 0);
 
     sample_size = sf_get_sample_size(ip->data.sf);
-    if (ip->PcmConvertInPlace != NULL)
+    if (ip->PcmConvertInPlace != NULL) {
         ip->PcmConvertInPlace(buf, rc / sample_size);
-    if (ip->PcmConvert != NULL)
+    }
+    if (ip->PcmConvert != NULL) {
         ip->PcmConvert(buffer, tmp, rc / sample_size);
+    }
+
     return rc * ip->pcmConvertScale;
 }
 
-int ip_seek(InputPlugin* ip, double offset)
+int ip_seek (InputPlugin* ip, double offset)
 {
     int rc;
 
-    if (ip->data.remote)
+    if (ip->data.remote) {
         return -INPUT_ERROR_FUNCTION_NOT_SUPPORTED;
+    }
+
     rc = ip->ops->Seek(&ip->data, offset);
-    if (rc == 0)
+    if (rc == 0) {
         ip->eof = 0;
+    }
+
     return rc;
 }
 
@@ -729,14 +736,17 @@ int ip_read_comments(InputPlugin* ip, KeyValue** comments)
             key_value_free(kv);
         }
 
-        if (ip->data.icyName && !key_value_get_val_growing(&c, "title"))
+        if (ip->data.icyName && !key_value_get_val_growing(&c, "title")) {
             key_value_add(&c, "title", xstrdup(ip->data.icyName));
+        }
 
-        if (ip->data.icyGenre && !key_value_get_val_growing(&c, "genre"))
+        if (ip->data.icyGenre && !key_value_get_val_growing(&c, "genre")) {
             key_value_add(&c, "genre", xstrdup(ip->data.icyGenre));
+        }
 
-        if (ip->data.icyURL && !key_value_get_val_growing(&c, "comment"))
+        if (ip->data.icyURL && !key_value_get_val_growing(&c, "comment")) {
             key_value_add(&c, "comment", xstrdup(ip->data.icyURL));
+        }
 
         key_value_terminate(&c);
 
@@ -750,12 +760,18 @@ int ip_read_comments(InputPlugin* ip, KeyValue** comments)
 
 int ip_duration(InputPlugin* ip)
 {
-    if (ip->data.remote)
+    if (ip->data.remote) {
         return -1;
-    if (ip->duration == -1)
+    }
+
+    if (ip->duration == -1) {
         ip->duration = ip->ops->Duration(&ip->data);
-    if (ip->duration < 0)
+    }
+
+    if (ip->duration < 0) {
         return -1;
+    }
+
     return ip->duration;
 }
 
@@ -797,6 +813,7 @@ char *ip_codec_profile(InputPlugin* ip)
 sample_format_t ip_get_sf(InputPlugin* ip)
 {
     BUG_ON(!ip->open);
+
     return ip->data.sf;
 }
 
@@ -839,7 +856,7 @@ int ip_eof(InputPlugin* ip)
 
 static void option_error(int rc)
 {
-    char *msg = ip_get_error_msg(NULL, rc, "setting option");
+    char *msg = ip_get_error_msg (NULL, rc, "setting option");
     error_msg("%s", msg);
     free(msg);
 }
@@ -923,7 +940,7 @@ void ip_add_options(void)
     ip_unlock();
 }
 
-char *ip_get_error_msg(InputPlugin* ip, int rc, const char *arg)
+char *ip_get_error_msg (InputPlugin* ip, int rc, const char *arg)
 {
     char buffer[1024];
 
@@ -991,7 +1008,7 @@ char *ip_get_error_msg(InputPlugin* ip, int rc, const char *arg)
     return xstrdup(buffer);
 }
 
-char **ip_get_supported_extensions(void)
+char** ip_get_supported_extensions(void)
 {
     Input* ip;
     char **exts;
