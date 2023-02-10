@@ -4,13 +4,7 @@
 
 #include "interface.h"
 
-#include "../global.h"
-
-
-static const char* gInputPluginName[] = {
-    "flac",
-    NULL
-};
+#include "input/flac.h"
 
 
 void input_plugin_register()

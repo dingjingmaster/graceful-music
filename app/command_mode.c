@@ -29,9 +29,9 @@
 #include "debug.h"
 #include "load_dir.h"
 #include "help.h"
-#include "op.h"
 #include "mpris.h"
 #include "job.h"
+#include "plugins/output-interface.h"
 
 #include <stdlib.h>
 #include <ctype.h>
@@ -1200,7 +1200,7 @@ static void cmd_mute(char *arg)
 	}
 
 	int rc = player_set_vol(l, 0, r, 0);
-	if (rc != OP_ERROR_SUCCESS) {
+	if (rc != OUTPUT_ERROR_SUCCESS) {
 		char *msg = op_get_error_msg(rc, "can't change volume");
 		error_msg("%s", msg);
 		free(msg);
@@ -1236,7 +1236,7 @@ static void cmd_vol(char *arg)
 	free_str_array(values);
 
 	int rc = player_set_vol(l, lf, r, rf);
-	if (rc != OP_ERROR_SUCCESS) {
+	if (rc != OUTPUT_ERROR_SUCCESS) {
 		char *msg = op_get_error_msg(rc, "can't change volume");
 		error_msg("%s", msg);
 		free(msg);

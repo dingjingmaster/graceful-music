@@ -8,6 +8,7 @@
 
 typedef unsigned int                SampleFormat;
 typedef struct _InputPlugins        InputPlugins;
+typedef struct _OutputPlugins       OutputPlugins;
 
 extern char*                        gLogPath;
 extern char*                        gCharset;

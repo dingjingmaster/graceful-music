@@ -3,7 +3,6 @@
 #include "input.h"
 #include "output.h"
 #include "sf.h"
-#include "op.h"
 #include "utils.h"
 #include "xmalloc.h"
 #include "log.h"
@@ -12,6 +11,7 @@
 #include "mpris.h"
 #include "cmus.h"
 #include "lib.h"
+#include "plugins/output-interface.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1389,7 +1389,7 @@ static int calc_vol(int val, int old, int max_vol, unsigned int flags)
 
 int player_set_vol(int l, int lf, int r, int rf)
 {
-	int rc = OP_ERROR_SUCCESS;
+	int rc = OUTPUT_ERROR_SUCCESS;
 	if (soft_vol) {
 		l = calc_vol(l, soft_vol_l, 100, lf);
 		r = calc_vol(r, soft_vol_r, 100, rf);

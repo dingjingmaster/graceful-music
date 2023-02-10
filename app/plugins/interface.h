@@ -6,10 +6,11 @@
 #define GRACEFUL_MUSIC_INTERFACE_H
 
 #include "input-interface.h"
+#include "mixer-interface.h"
+#include "output-interface.h"
 
 #include "log.h"
 #include "../global.h"
-#include "input/flac.h"
 
 #include <stdbool.h>
 
@@ -74,6 +75,24 @@ struct _InputPlugin
      * 1  otherwise
      */
     int                                 pcmConvertScale;
+};
+
+
+struct _OutputPlugin
+{
+    char*                               name;
+    void*                               handle;
+
+    const unsigned int                  abiVersion;
+    const OutputPluginOps*              pcmOps;
+    const MixerPluginOps*               mixerOps;
+    const OutputPluginOpt*              pcmOptions;
+    const MixerPluginOpt*               mixerOptions;
+    int                                 priority;
+
+    unsigned int                        pcmInitialized : 1;
+    unsigned int                        mixerInitialized : 1;
+    unsigned int                        mixerOpen : 1;
 };
 
 void input_plugin_register ();

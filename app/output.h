@@ -2,6 +2,7 @@
 #define CMUS_OUTPUT_H
 
 #include "sf.h"
+#include "global.h"
 #include "channel-map.h"
 
 extern int volume_max;
@@ -24,7 +25,7 @@ int op_select_any(void);
  *
  * errors: OP_ERROR_{}
  */
-int op_open(sample_format_t sf, const ChannelPosition* channelMap);
+int op_open(SampleFormat sf, const ChannelPosition* channelMap);
 
 /*
  * drop pcm data

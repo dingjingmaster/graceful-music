@@ -33,7 +33,7 @@
 #include "input.h"
 #include "file.h"
 #include "path.h"
-#include "mixer.h"
+#include "mixer-interface.h"
 #include "mpris.h"
 #include "locking.h"
 #ifdef HAVE_CONFIG

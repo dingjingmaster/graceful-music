@@ -8,7 +8,7 @@
 #include <sndio.h>
 
 #include "../op.h"
-#include "../mixer.h"
+#include "mixer-interface.h"
 #include "../sf.h"
 #include "../xmalloc.h"
 

@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #include "../debug.h"
-#include "../mixer.h"
+#include "mixer-interface.h"
 #include "../op.h"
 #include "../sf.h"
 #include "../xmalloc.h"

@@ -3,7 +3,7 @@
 #include <pulse/pulseaudio.h>
 
 #include "../op.h"
-#include "../mixer.h"
+#include "mixer-interface.h"
 #include "../debug.h"
 #include "../utils.h"
 #include "../xmalloc.h"

@@ -1,6 +1,6 @@
 #include "read_wrapper.h"
-#include "ip.h"
 #include "file.h"
+#include "plugins/input-interface.h"
 
 #include <unistd.h>
 
