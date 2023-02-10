@@ -76,7 +76,7 @@ struct _InputPlugin
 
 struct _Input
 {
-    struct list_head node;
+    GList*                              node;
     char*                               name;
     void*                               handle;
 
@@ -88,7 +88,9 @@ struct _Input
 };
 
 static const char* pluginDir;
-static LIST_HEAD(ip_head);
+//static LIST_HEAD(ip_head);
+//static GSList*                          gInputHead;
+//gInputPlugins;
 
 /* protects ip->priority and ip_head */
 static pthread_rwlock_t ip_lock = CMUS_RWLOCK_INITIALIZER;
@@ -107,71 +109,86 @@ static const char *pl_mime_types[] = {
     "audio/x-mpegurl"
 };
 
-static const InputPluginOps* get_ops_by_extension_locked(const char *ext, struct list_head **headp)
+/**
+ * @brief
+ *  通过文件扩展名获取 plugin
+ */
+static const InputPluginOps* get_ops_by_extension_locked (const char* ext)
+//    static const InputPluginOps* get_ops_by_extension_locked (const char* ext, struct list_head** pHeader)
 {
-    struct list_head *node = *headp;
+    GHashTable* index = gInputPlugins->pluginIndex;
 
-    for (node = node->next; node != &ip_head; node = node->next) {
-        Input* ip = list_entry (node, Input, node);
-        const char * const *exts = ip->extensions;
-        int i;
-
-        if (ip->priority <= 0) {
-            break;
-        }
-
-        for (i = 0; exts[i]; i++) {
-            if (strcasecmp(ext, exts[i]) == 0 || strcmp("*", exts[i]) == 0) {
-                *headp = node;
-                return ip->ops;
-            }
-        }
+    if (g_hash_table_contains (index, ext)) {
+        InputPlugin* p = (InputPlugin*) g_hash_table_lookup (index, ext);
+        return p->ops;
     }
+
+//    struct list_head *node = *headp;
+//
+//    for (node = node->next; node != &ip_head; node = node->next) {
+//        Input* ip = list_entry (node, Input, node);
+//        const char * const *exts = ip->extensions;
+//        int i;
+//
+//        if (ip->priority <= 0) {
+//            break;
+//        }
+//
+//        for (i = 0; exts[i]; i++) {
+//            if (strcasecmp(ext, exts[i]) == 0 || strcmp("*", exts[i]) == 0) {
+//                *headp = node;
+//                return ip->ops;
+//            }
+//        }
+//    }
+//
+//    for (GSList* node = *pHeader; node != NULL;)
+//
+
     return NULL;
 }
 
-static const InputPluginOps* get_ops_by_extension(const char *ext, struct list_head **headp)
+static const InputPluginOps* get_ops_by_extension (const char *ext)
 {
     ip_rdlock();
-    const InputPluginOps* rv = get_ops_by_extension_locked(ext, headp);
+    const InputPluginOps* rv = get_ops_by_extension_locked (ext);
     ip_unlock();
     return rv;
 }
 
-static const InputPluginOps* get_ops_by_mime_type_locked(const char *mime_type)
+static const InputPluginOps* get_ops_by_mime_type_locked (const char *mime_type)
 {
     Input* ip;
 
-    list_for_each_entry(ip, &ip_head, node) {
-        const char * const *types = ip->mimeTypes;
-        int i;
-
-        if (ip->priority <= 0) {
-            break;
-        }
-
-        for (i = 0; types[i]; i++) {
-            if (strcasecmp(mime_type, types[i]) == 0)
-                return ip->ops;
-        }
-    }
+//    list_for_each_entry(ip, &ip_head, node) {
+//        const char * const *types = ip->mimeTypes;
+//        int i;
+//
+//        if (ip->priority <= 0) {
+//            break;
+//        }
+//
+//        for (i = 0; types[i]; i++) {
+//            if (strcasecmp(mime_type, types[i]) == 0)
+//                return ip->ops;
+//        }
+//    }
     return NULL;
 }
 
-static const InputPluginOps*
-get_ops_by_mime_type(const char *mime_type)
+static const InputPluginOps* get_ops_by_mime_type (const char* mimeType)
 {
     ip_rdlock();
-    const InputPluginOps* rv =
-        get_ops_by_mime_type_locked(mime_type);
+    const InputPluginOps* rv = get_ops_by_mime_type_locked (mimeType);
     ip_unlock();
+
     return rv;
 }
 
-static void keyvals_add_basic_auth(struct growing_keyvals *c,
-                                   const char *user,
-                                   const char *pass,
-                                   const char *header)
+static void key_value_add_basic_auth(struct growing_keyvals* c,
+                                   const char* user,
+                                   const char* pass,
+                                   const char* header)
 {
     char buf[256];
     char *encoded;
@@ -209,11 +226,11 @@ static int do_http_get(struct http_get *hg, const char *uri, int redirections)
 
     key_value_add(&h, "Host", xstrdup(hg->uri.host));
     if (hg->proxy && hg->proxy->user && hg->proxy->pass)
-        keyvals_add_basic_auth(&h, hg->proxy->user, hg->proxy->pass, "Proxy-Authorization");
+        key_value_add_basic_auth(&h, hg->proxy->user, hg->proxy->pass, "Proxy-Authorization");
     key_value_add(&h, "User-Agent", xstrdup("cmus/" VERSION));
     key_value_add(&h, "Icy-MetaData", xstrdup("1"));
     if (hg->uri.user && hg->uri.pass)
-        keyvals_add_basic_auth(&h, hg->uri.user, hg->uri.pass, "Authorization");
+        key_value_add_basic_auth(&h, hg->uri.user, hg->uri.pass, "Authorization");
     key_value_terminate(&h);
 
     rc = http_get(hg, h.keyValues, http_read_timeout);
@@ -429,10 +446,10 @@ static void ip_reset(InputPlugin* ip, int close_fd)
     }
 }
 
-static int open_file_locked(InputPlugin* ip)
+static int open_file_locked (InputPlugin* ip)
 {
     const InputPluginOps* ops;
-    struct list_head *head = &ip_head;
+//    struct list_head *head = &ip_head;
     const char *ext;
     int rc = 0;
 
@@ -440,7 +457,7 @@ static int open_file_locked(InputPlugin* ip)
     if (!ext)
         return -INPUT_ERROR_UNRECOGNIZED_FILE_TYPE;
 
-    ops = get_ops_by_extension(ext, &head);
+    ops = get_ops_by_extension(ext);
     if (!ops)
         return -INPUT_ERROR_UNRECOGNIZED_FILE_TYPE;
 
@@ -454,12 +471,12 @@ static int open_file_locked(InputPlugin* ip)
         if (rc != -INPUT_ERROR_UNSUPPORTED_FILE_TYPE)
             break;
 
-        ops = get_ops_by_extension(ext, &head);
+        ops = get_ops_by_extension(ext);
         if (!ops)
             break;
 
         ip_reset(ip, 0);
-        DEBUG ("fallback: try next plugin for `%s'\n", ip->data.fileName);
+        DEBUG ("fallback: try next plugin for `%s'", ip->data.fileName);
     }
 
     return rc;
@@ -530,34 +547,34 @@ void ip_load_plugins(void)
         ip = xnew (Input, 1);
 
         // FIXME:// DJ- 这些符号已废弃
-        abi_version_ptr = dlsym(so, "ip_abi_version");
-        priority_ptr = dlsym(so, "ip_priority");
-        ip->extensions = dlsym(so, "ip_extensions");
-        ip->mimeTypes = dlsym(so, "ip_mime_types");
-        ip->ops = dlsym(so, "ip_ops");
-        ip->options = dlsym(so, "ip_options");
-        if (!priority_ptr || !ip->extensions || !ip->mimeTypes || !ip->ops || !ip->options) {
-            ERROR ("%s: missing symbol", filename);
-            err = true;
-        }
-        if (!abi_version_ptr || *abi_version_ptr != INPUT_ABI_VERSION) {
-            ERROR ("%s: incompatible plugin version", filename);
-            err = true;
-        }
-        if (err) {
-            free(ip);
-            dlclose(so);
-            continue;
-        }
-        ip->priority = *priority_ptr;
-
-        ip->name = xstrndup(d->d_name, ext - d->d_name);
-        ip->handle = so;
-
-        list_add_tail(&ip->node, &ip_head);
+//        abi_version_ptr = dlsym(so, "ip_abi_version");
+//        priority_ptr = dlsym(so, "ip_priority");
+//        ip->extensions = dlsym(so, "ip_extensions");
+//        ip->mimeTypes = dlsym(so, "ip_mime_types");
+//        ip->ops = dlsym(so, "ip_ops");
+//        ip->options = dlsym(so, "ip_options");
+//        if (!priority_ptr || !ip->extensions || !ip->mimeTypes || !ip->ops || !ip->options) {
+//            ERROR ("%s: missing symbol", filename);
+//            err = true;
+//        }
+//        if (!abi_version_ptr || *abi_version_ptr != INPUT_ABI_VERSION) {
+//            ERROR ("%s: incompatible plugin version", filename);
+//            err = true;
+//        }
+//        if (err) {
+//            free(ip);
+//            dlclose(so);
+//            continue;
+//        }
+//        ip->priority = *priority_ptr;
+//
+//        ip->name = xstrndup(d->d_name, ext - d->d_name);
+//        ip->handle = so;
+//
+//        list_add_tail(&ip->node, &ip_head);
     }
 
-    list_mergesort(&ip_head, sort_ip);
+//    list_mergesort(&ip_head, sort_ip);
 
     closedir(dir);
 
@@ -906,7 +923,7 @@ static void set_ip_priority(void *data, const char *val)
 
     ip_wrlock();
     ip->priority = (int)tmp;
-    list_mergesort(&ip_head, sort_ip);
+//    list_mergesort(&ip_head, sort_ip);
     ip_unlock();
 }
 
@@ -925,14 +942,14 @@ void ip_add_options(void)
     char key[64];
 
     ip_rdlock();
-    list_for_each_entry(ip, &ip_head, node) {
-        for (ipo = ip->options; ipo->name; ipo++) {
-            snprintf(key, sizeof(key), "input.%s.%s", ip->name, ipo->name);
-            option_add(xstrdup(key), ipo, get_ip_option, set_ip_option, NULL, 0);
-        }
-        snprintf(key, sizeof(key), "input.%s.priority", ip->name);
-        option_add(xstrdup(key), ip, get_ip_priority, set_ip_priority, NULL, 0);
-    }
+//    list_for_each_entry(ip, &ip_head, node) {
+//        for (ipo = ip->options; ipo->name; ipo++) {
+//            snprintf(key, sizeof(key), "input.%s.%s", ip->name, ipo->name);
+//            option_add(xstrdup(key), ipo, get_ip_option, set_ip_option, NULL, 0);
+//        }
+//        snprintf(key, sizeof(key), "input.%s.priority", ip->name);
+//        option_add(xstrdup(key), ip, get_ip_priority, set_ip_priority, NULL, 0);
+//    }
     ip_unlock();
 }
 
@@ -1014,38 +1031,38 @@ char **ip_get_supported_extensions(void)
     size = 8;
     exts = xnew(char *, size);
     ip_rdlock();
-    list_for_each_entry(ip, &ip_head, node) {
-        const char * const *e = ip->extensions;
-
-        for (i = 0; e[i]; i++) {
-            if (count == size - 1) {
-                size *= 2;
-                exts = xrenew(char *, exts, size);
-            }
-            exts[count++] = xstrdup(e[i]);
-        }
-    }
+//    list_for_each_entry(ip, &ip_head, node) {
+//        const char * const *e = ip->extensions;
+//
+//        for (i = 0; e[i]; i++) {
+//            if (count == size - 1) {
+//                size *= 2;
+//                exts = xrenew(char *, exts, size);
+//            }
+//            exts[count++] = xstrdup(e[i]);
+//        }
+//    }
     ip_unlock();
     exts[count] = NULL;
     qsort(exts, count, sizeof(char *), strptrcmp);
     return exts;
 }
 
-void ip_dump_plugins(void)
+void ip_dump_plugins (void)
 {
     Input* ip;
     int i;
 
     printf("Input Plugins: %s", pluginDir);
     ip_rdlock();
-    list_for_each_entry(ip, &ip_head, node) {
-        printf("  %s:\n    Priority: %d\n    File Types:", ip->name, ip->priority);
-        for (i = 0; ip->extensions[i]; i++)
-            printf(" %s", ip->extensions[i]);
-        printf("\n    MIME Types:");
-        for (i = 0; ip->mimeTypes[i]; i++)
-            printf(" %s", ip->mimeTypes[i]);
-        printf("\n");
-    }
+//    list_for_each_entry(ip, &ip_head, node) {
+//        printf("  %s:\n    Priority: %d\n    File Types:", ip->name, ip->priority);
+//        for (i = 0; ip->extensions[i]; i++)
+//            printf(" %s", ip->extensions[i]);
+//        printf("\n    MIME Types:");
+//        for (i = 0; ip->mimeTypes[i]; i++)
+//            printf(" %s", ip->mimeTypes[i]);
+//        printf("\n");
+//    }
     ip_unlock();
 }
