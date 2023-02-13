@@ -10,7 +10,6 @@
 #include "pl.h"
 #include "play_queue.h"
 #include "lib.h"
-#include "utils.h"
 #include "file.h"
 #include "cache.h"
 #include "player.h"

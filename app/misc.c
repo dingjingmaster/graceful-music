@@ -1,10 +1,13 @@
 #include "misc.h"
+
+
+#include "log.h"
 #include "prog.h"
+#include "utils.h"
+#include "global.h"
 #include "xmalloc.h"
 #include "xstrjoin.h"
 #include "ui_curses.h"
-#include "log.h"
-#include "global.h"
 
 
 #include <string.h>
@@ -183,20 +186,18 @@ const char *get_filename(const char *path)
 
 static void move_old_playlist(void)
 {
-    char *default_playlist = xstrjoin(gPlaylistDir, "/default");
-    char *old_playlist = xstrjoin(gConfigDir, "/playlist.pl");
-    int rc = rename(old_playlist, default_playlist);
-    if (rc && errno != ENOENT)
-        die_errno("error: unable to move %s to playlist directory",
-                  old_playlist);
-    free(default_playlist);
-    free(old_playlist);
+    g_autofree char* defaultPlaylist = g_strdup_printf("%s/default", gPlaylistDir);
+    g_autofree char* oldPlaylist = g_strdup_printf("%s/playlist.pl", gConfigDir);
+    int rc = rename(oldPlaylist, defaultPlaylist);
+    if (rc && errno != ENOENT) {
+        DIE("error: unable to move %s to playlist directory", oldPlaylist);
+    }
 }
 
 int misc_init(void)
 {
-    int playlistDirIsNew = dir_exists(gPlaylistDir) == 0;
-    make_dir(gPlaylistDir);
+    int playlistDirIsNew = path_is_dir (gPlaylistDir) && path_is_exist (gPlaylistDir);
+    g_mkdir_with_parents (gPlaylistDir, 0755);
     if (playlistDirIsNew) {
         move_old_playlist();
     }

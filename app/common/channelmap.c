@@ -1,5 +1,5 @@
 #include "channelmap.h"
-#include "utils.h"
+#include "utils.h.bak"
 
 void channel_map_init_waveex(int channels, unsigned int mask, channel_position_t *map)
 {
