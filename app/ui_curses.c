@@ -2296,7 +2296,7 @@ static void init_curses(void)
 
 static void init_all(void)
 {
-	main_thread = pthread_self();
+	gMainThread = pthread_self();
 	cmus_track_request_init();
 
 	server_init(gSocketPath);
@@ -2304,7 +2304,7 @@ static void init_all(void)
 	/* does not select output plugin */
 	player_init();
 
-	/* plugins have been loaded so we know what plugin options are available */
+	/* plugins have been loaded, so we know what plugin options are available */
 	options_add();
 
 	lib_init();

@@ -443,7 +443,7 @@ static struct track_info *cmus_get_next_from_other_thread(void)
 struct track_info *cmus_get_next_track(void)
 {
 	pthread_t this_thread = pthread_self();
-	if (pthread_equal(this_thread, main_thread))
+	if (pthread_equal(this_thread, gMainThread))
 		return cmus_get_next_from_main_thread();
 	return cmus_get_next_from_other_thread();
 }

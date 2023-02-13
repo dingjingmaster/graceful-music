@@ -1013,11 +1013,8 @@ static void *producer_loop(void *arg)
 
 void player_init(void)
 {
-	int rc;
-#ifdef REALTIME_SCHEDULING
-	pthread_attr_t attr;
-#endif
-	pthread_attr_t *attrp = NULL;
+	pthread_attr_t              attr;
+	pthread_attr_t*             attrP = NULL;
 
 	/*  1 s is 176400 B (0.168 MB)
 	 * 10 s is 1.68 MB
@@ -1025,33 +1022,28 @@ void player_init(void)
 	buffer_nr_chunks = 10 * 44100 * 16 / 8 * 2 / CHUNK_SIZE;
 	buffer_init();
 
-#ifdef REALTIME_SCHEDULING
-	rc = pthread_attr_init(&attr);
-	BUG_ON(rc);
+	int rc = pthread_attr_init(&attr);
 	rc = pthread_attr_setschedpolicy(&attr, SCHED_RR);
 	if (rc) {
-		DEBUG ("could not set real-time scheduling priority: %s\n", strerror(rc));
+		WARNING ("could not set real-time scheduling priority: %s", strerror(rc));
 	} else {
 		struct sched_param param;
 
-		DEBUG ("using real-time scheduling\n");
+		DEBUG ("using real-time scheduling");
 		param.sched_priority = sched_get_priority_max(SCHED_RR);
-		DEBUG ("setting priority to %d\n", param.sched_priority);
+		DEBUG ("setting priority to %d", param.sched_priority);
 		rc = pthread_attr_setschedparam(&attr, &param);
 		BUG_ON(rc);
-		attrp = &attr;
+		attrP = &attr;
 	}
-#endif
 
 	rc = pthread_create(&producer_thread, NULL, producer_loop, NULL);
-	BUG_ON(rc);
 
-	rc = pthread_create(&consumer_thread, attrp, consumer_loop, NULL);
-	if (rc && attrp) {
+	rc = pthread_create(&consumer_thread, attrP, consumer_loop, NULL);
+	if (rc && attrP) {
 		DEBUG ("could not create thread using real-time scheduling: %s", strerror(rc));
 		rc = pthread_create(&consumer_thread, NULL, consumer_loop, NULL);
 	}
-	BUG_ON(rc);
 
 	/* update player_info_priv.cont etc. */
 	player_lock();

@@ -11,7 +11,7 @@ struct fifo_waiter {
 	pthread_cond_t cond;
 };
 
-pthread_t main_thread;
+pthread_t gMainThread;
 
 void cmus_mutex_lock(pthread_mutex_t *mutex)
 {

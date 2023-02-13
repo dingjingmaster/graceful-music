@@ -10,7 +10,7 @@ struct fifo_mutex {
 	pthread_mutex_t mutex;
 };
 
-extern pthread_t main_thread;
+extern pthread_t gMainThread;
 
 #define CMUS_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #define CMUS_COND_INITIALIZER PTHREAD_COND_INITIALIZER
