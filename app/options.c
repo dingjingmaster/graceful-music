@@ -850,8 +850,9 @@ static void get_auto_expand_albums_search(void *data, char *buf, size_t size)
 static void set_auto_expand_albums_search_int(int value)
 {
 	auto_expand_albums_search = !!value;
-	if (!auto_expand_albums_search && !show_all_tracks)
-		set_show_all_tracks_int(1);
+	if (!auto_expand_albums_search && !show_all_tracks) {
+        set_show_all_tracks_int(1);
+    }
 }
 
 static void set_auto_expand_albums_search(void *data, const char *buf)

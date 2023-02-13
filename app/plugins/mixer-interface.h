@@ -37,8 +37,8 @@ struct _MixerPluginOps
 struct _MixerPluginOpt
 {
     const char*     name;
-    int (*Get)      (char** val);
     int (*Set)      (const char* val);
+    int (*Get)      (char** val);
 };
 
 /* symbols exported by plugin */

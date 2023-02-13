@@ -369,10 +369,10 @@ static void utf8_encode_to_buf(const char *buffer)
 	int rc;
 
 	if (cd == (iconv_t)-1) {
-		d_print("iconv_open(UTF-8, %s)\n", charset);
+		DEBUG ("iconv_open(UTF-8, %s)\n", charset);
 		cd = iconv_open("UTF-8", charset);
 		if (cd == (iconv_t)-1) {
-			d_print("iconv_open failed: %s\n", strerror(errno));
+			DEBUG ("iconv_open failed: %s\n", strerror(errno));
 			goto fallback;
 		}
 	}
@@ -383,7 +383,7 @@ static void utf8_encode_to_buf(const char *buffer)
 	rc = iconv(cd, (void *)&i, &is, &o, &os);
 	*o = 0;
 	if (rc == -1) {
-		d_print("iconv failed: %s\n", strerror(errno));
+		DEBUG ("iconv failed: %s\n", strerror(errno));
 		goto fallback;
 	}
 	return;
@@ -405,10 +405,10 @@ static void utf8_decode(const char *buffer)
 	int rc;
 
 	if (cd == (iconv_t)-1) {
-		d_print("iconv_open(%s, UTF-8)\n", charset);
+		DEBUG ("iconv_open(%s, UTF-8)\n", charset);
 		cd = iconv_open(charset, "UTF-8");
 		if (cd == (iconv_t)-1) {
-			d_print("iconv_open failed: %s\n", strerror(errno));
+			DEBUG ("iconv_open failed: %s\n", strerror(errno));
 			goto fallback;
 		}
 	}
@@ -419,7 +419,7 @@ static void utf8_decode(const char *buffer)
 	rc = iconv(cd, (void *)&i, &is, &o, &os);
 	*o = 0;
 	if (rc == -1) {
-		d_print("iconv failed: %s\n", strerror(errno));
+		DEBUG ("iconv failed: %s\n", strerror(errno));
 		goto fallback;
 	}
 	return;
@@ -1475,7 +1475,7 @@ void error_msg(const char *format, ...)
 	gbuf_vaddf(&error_buf, format, ap);
 	va_end(ap);
 
-	d_print("%s\n", error_buf.buffer);
+	DEBUG ("%s\n", error_buf.buffer);
 	if (client_fd != -1) {
 		write_all(client_fd, error_buf.buffer, error_buf.len);
 		write_all(client_fd, "\n", 1);
@@ -1789,7 +1789,7 @@ static void sig_int(int sig)
 
 static void sig_shutdown(int sig)
 {
-	d_print("sig_shutdown %d\n", sig);
+	DEBUG ("sig_shutdown %d\n", sig);
 	cmus_running = 0;
 }
 
@@ -2164,7 +2164,7 @@ static void main_loop(void)
 
 		for (i = 0; i < nr_fds_vol; i++) {
 			if (FD_ISSET(fds_vol[i], &set)) {
-				d_print("vol changed\n");
+				DEBUG ("vol changed");
 				mixer_read_volume();
 				mpris_volume_changed();
 				update_statusline();
@@ -2172,7 +2172,7 @@ static void main_loop(void)
 		}
 		for (i = 0; i < nr_fds_out; i++) {
 			if (FD_ISSET(fds_out[i], &set)) {
-				d_print("out changed\n");
+				DEBUG ("out changed");
 				if (pause_on_output_change) {
 					player_pause_playback();
 					update_statusline();
@@ -2245,7 +2245,7 @@ static void init_curses(void)
 		use_default_colors();
 #endif
 	}
-	d_print("Number of supported colors: %d\n", COLORS);
+	DEBUG ("Number of supported colors: %d\n", COLORS);
 	ui_initialized = 1;
 
 	/* this was disabled while initializing because it needs to be
@@ -2256,7 +2256,7 @@ static void init_curses(void)
 	ptr = tcap_buffer;
 	t_ts = tgetstr("ts", &ptr);
 	t_fs = tgetstr("fs", &ptr);
-	d_print("ts: %d fs: %d\n", !!t_ts, !!t_fs);
+	DEBUG ("ts: %d fs: %d\n", !!t_ts, !!t_fs);
 
 	if (!t_fs)
 		t_ts = NULL;
@@ -2461,17 +2461,20 @@ int curses_main(int argc, char *argv[])
 
 	misc_init();
 
-    // FIXME://  去掉插件
 	ip_load_plugins();
 	op_load_plugins();
+
 	if (list_plugins) {
 		ip_dump_plugins();
 		op_dump_plugins();
 		return 0;
 	}
+
+    LOG_DEBUG ("Load plugin ok!");
 	init_all();
 	main_loop();
 	exit_all();
 	spawn_status_program_inner("exiting", NULL);
+
 	return 0;
 }

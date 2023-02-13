@@ -36,6 +36,16 @@ int main (int argc, char* argv[])
 
     INFO ("%s starting ...", PACKAGE_NAME)
 
+    static struct sigaction sigAction;
+    sigAction.sa_sigaction = signal_handler;
+    sigAction.sa_flags |= SA_SIGINFO;
+
+    if (sigaction(SIGSEGV, &sigAction, NULL)) {
+        LOG_ERROR ("sigaction error: %s", strerror (errno));
+        return errno;
+    }
+
+
     /**
      * NOTE:// 多个界面
      */

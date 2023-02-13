@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include "log.h"
 
 struct fifo_waiter {
 	struct fifo_waiter * _Atomic next;
@@ -22,8 +23,9 @@ void cmus_mutex_lock(pthread_mutex_t *mutex)
 void cmus_mutex_unlock(pthread_mutex_t *mutex)
 {
 	int rc = pthread_mutex_unlock(mutex);
-	if (unlikely(rc))
-		BUG("error unlocking mutex: %s\n", strerror(rc));
+	if (unlikely(rc)) {
+        BUG("error unlocking mutex: %s\n", strerror(rc));
+    }
 }
 
 void cmus_rwlock_rdlock(pthread_rwlock_t *lock)

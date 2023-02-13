@@ -125,10 +125,12 @@ static double replaygain_scale = 1.0;
 
 static void reset_buffer(void)
 {
+    DEBUG("start");
 	buffer_reset();
 	consumer_pos = 0;
 	scale_pos = 0;
 	pthread_cond_broadcast(&producer_playing);
+    DEBUG("ok");
 }
 
 static void set_buffer_sf(void)
@@ -358,15 +360,15 @@ static void update_rg_scale(void)
 	}
 
 	if (isnan(gain)) {
-		d_print("gain not available\n");
+		DEBUG ("gain not available\n");
 		return;
 	}
 	if (isnan(peak)) {
-		d_print("peak not available, deriving from output gain\n");
+		DEBUG ("peak not available, deriving from output gain\n");
 		peak = pow(10.0, player_info_priv.ti->output_gain / 20.0);
 	}
 	if (peak < 0.05) {
-		d_print("peak (%g) is too small\n", peak);
+		DEBUG ("peak (%g) is too small\n", peak);
 		return;
 	}
 
@@ -380,7 +382,7 @@ static void update_rg_scale(void)
 			replaygain_scale = limit;
 	}
 
-	d_print("gain = %f, peak = %f, db = %f, scale = %f, limit = %f, replaygain_scale = %f\n",
+	DEBUG ("gain = %f, peak = %f, db = %f, scale = %f, limit = %f, replaygain_scale = %f\n",
 			gain, peak, db, scale, limit, replaygain_scale);
 }
 
@@ -393,35 +395,39 @@ static inline unsigned int buffer_second_size(void)
 
 static inline void _file_changed(struct track_info *ti)
 {
+    DEBUG("START");
 	player_info_priv_lock();
-	if (player_info_priv.ti)
-		track_info_unref(player_info_priv.ti);
+	if (player_info_priv.ti) {
+        track_info_unref(player_info_priv.ti);
+    }
 
 	player_info_priv.ti = ti;
 	update_rg_scale();
 	player_metadata[0] = 0;
 	player_info_priv.file_changed = 1;
 	player_info_priv_unlock();
+    DEBUG("OK");
 }
 
 static inline void file_changed(struct track_info *ti)
 {
 	if (ti) {
-		d_print("file: %s\n", ti->filename);
+		DEBUG ("file: %s", ti->filename);
 	} else {
-		d_print("unloaded\n");
+		DEBUG ("unloaded");
 	}
 	_file_changed(ti);
 }
 
 static inline void metadata_changed(void)
 {
-	struct keyval *comments;
+    DEBUG ("start");
+	KeyValue* comments;
 	int rc;
 
 	player_info_priv_lock();
 	if (ip_get_metadata(ip)) {
-		d_print("metadata changed: %s\n", ip_get_metadata(ip));
+		DEBUG ("metadata changed: %s", ip_get_metadata(ip));
 		memcpy(player_metadata, ip_get_metadata(ip), 255 * 16 + 1);
 	}
 
@@ -434,6 +440,7 @@ static inline void metadata_changed(void)
 
 	player_info_priv.metadata_changed = 1;
 	player_info_priv_unlock();
+    DEBUG ("OK");
 }
 
 static void player_error(const char *msg)
@@ -497,7 +504,7 @@ static void _producer_buffer_fill_update(void)
 	player_info_priv_lock();
 	fill = buffer_get_filled_chunks();
 	if (fill != player_info_priv.buffer_fill) {
-/* 		d_print("\n"); */
+/* 		DEBUG ("\n"); */
 		player_info_priv.buffer_fill = fill;
 		player_info_priv.buffer_fill_changed = 1;
 	}
@@ -538,7 +545,7 @@ static void _player_status_changed(void)
 {
 	unsigned int pos = 0;
 
-/* 	d_print("\n"); */
+/* 	DEBUG ("\n"); */
 	if (consumer_status == CS_PLAYING || consumer_status == CS_PAUSED)
 		pos = consumer_pos / buffer_second_size();
 
@@ -575,7 +582,7 @@ static void _prebuffer(void)
 		char *wpos;
 
 		filled = buffer_get_filled_chunks();
-/* 		d_print("PREBUF: %2d / %2d\n", filled, limit_chunks); */
+/* 		DEBUG ("PREBUF: %2d / %2d\n", filled, limit_chunks); */
 
 		/* not fatal */
 		//BUG_ON(filled > limit_chunks);
@@ -610,8 +617,10 @@ static void _prebuffer(void)
 
 static void _producer_status_update(enum producer_status status)
 {
+    DEBUG ("start");
 	producer_status =  status;
 	pthread_cond_broadcast(&producer_playing);
+    DEBUG ("OK");
 }
 
 static void _producer_play(void)
@@ -631,6 +640,7 @@ static void _producer_play(void)
 				file_changed(NULL);
 			} else {
 				ip_setup(ip);
+                DEBUG ("update status: PS_PLAYING");
 				_producer_status_update(PS_PLAYING);
 				file_changed(ti);
 			}
@@ -649,6 +659,7 @@ static void _producer_play(void)
 			_producer_status_update(PS_UNLOADED);
 		} else {
 			ip_setup(ip);
+            DEBUG ("update status: PS_PLAYING");
 			_producer_status_update(PS_PLAYING);
 		}
 	} else if (producer_status == PS_PAUSED) {
@@ -843,18 +854,20 @@ static void *consumer_loop(void *arg)
 		char *rpos;
 
 		consumer_lock();
-		if (!consumer_running)
-			break;
+		if (!consumer_running) {
+            break;
+        }
 
 		if (consumer_status == CS_PAUSED || consumer_status == CS_STOPPED) {
 			pthread_cond_wait(&consumer_playing, &consumer_mutex);
 			consumer_unlock();
 			continue;
 		}
+        DEBUG("");
 		space = op_buffer_space();
+        DEBUG("");
 		if (space < 0) {
-			d_print("op_buffer_space returned %d %s\n", space,
-					space == -1 ? strerror(errno) : "");
+			DEBUG ("op_buffer_space returned %d %s\n", space, space == -1 ? strerror(errno) : "");
 
 			/* try to reopen */
 			op_close();
@@ -864,7 +877,7 @@ static void *consumer_loop(void *arg)
 			consumer_unlock();
 			continue;
 		}
-/* 		d_print("BS: %6d %3d\n", space, space * 1000 / (44100 * 2 * 2)); */
+        DEBUG ("BS: %6d %3d\n", space, space * 1000 / (44100 * 2 * 2));
 
 		while (1) {
 			if (space == 0) {
@@ -873,7 +886,9 @@ static void *consumer_loop(void *arg)
 				ms_sleep(25);
 				break;
 			}
+            DEBUG("");
 			size = buffer_get_rpos(&rpos);
+            DEBUG("");
 			if (size == 0) {
 				producer_lock();
 				if (producer_status != PS_PLAYING) {
@@ -882,21 +897,27 @@ static void *consumer_loop(void *arg)
 					break;
 				}
 				/* must recheck rpos */
+                DEBUG("");
 				size = buffer_get_rpos(&rpos);
+                DEBUG("");
 				if (size == 0) {
 					/* OK. now it's safe to check if we are at EOF */
 					if (ip_eof(ip)) {
 						/* EOF */
+                        DEBUG("");
 						_consumer_handle_eof();
+                        DEBUG("");
 						producer_unlock();
 						consumer_unlock();
 						break;
 					} else {
 						/* possible underrun */
 						producer_unlock();
+                        DEBUG("");
 						_consumer_position_update();
+                        DEBUG("");
 						consumer_unlock();
-/* 						d_print("possible underrun\n"); */
+/* 						DEBUG ("possible underrun\n"); */
 						ms_sleep(10);
 						break;
 					}
@@ -911,8 +932,7 @@ static void *consumer_loop(void *arg)
 				scale_samples(rpos, (unsigned int *)&size);
 			rc = op_write(rpos, size);
 			if (rc < 0) {
-				d_print("op_write returned %d %s\n", rc,
-						rc == -1 ? strerror(errno) : "");
+				DEBUG ("op_write returned %d %s\n", rc, rc == -1 ? strerror(errno) : "");
 
 				/* try to reopen */
 				op_close();
@@ -922,13 +942,16 @@ static void *consumer_loop(void *arg)
 				consumer_unlock();
 				break;
 			}
+            DEBUG("");
 			buffer_consume(rc);
+            DEBUG("");
 			consumer_pos += rc;
 			space -= rc;
 		}
 	}
 	_consumer_stop();
 	consumer_unlock();
+
 	return NULL;
 }
 
@@ -944,9 +967,11 @@ static void *producer_loop(void *arg)
 		char *wpos;
 
 		producer_lock();
-		if (!producer_running)
-			break;
+		if (!producer_running) {
+            break;
+        }
 
+        DEBUG("");
 		if (producer_status == PS_UNLOADED ||
 		    producer_status == PS_PAUSED ||
 		    producer_status == PS_STOPPED || ip_eof(ip)) {
@@ -954,29 +979,36 @@ static void *producer_loop(void *arg)
 			producer_unlock();
 			continue;
 		}
+        DEBUG("");
 		for (i = 0; ; i++) {
 			size = buffer_get_wpos(&wpos);
 			if (size == 0) {
 				/* buffer is full */
 				producer_unlock();
 				ms_sleep(50);
+                DEBUG("");
 				break;
 			}
+            DEBUG("");
 			nr_read = ip_read(ip, wpos, size);
+            DEBUG("");
 			if (nr_read < 0) {
 				if (nr_read != -1 || errno != EAGAIN) {
-					player_ip_error(nr_read, "reading file %s",
-							ip_get_filename(ip));
+					player_ip_error(nr_read, "reading file %s", ip_get_filename(ip));
 					/* ip_read sets eof */
 					nr_read = 0;
 				} else {
 					producer_unlock();
 					ms_sleep(50);
+                    DEBUG("");
 					break;
 				}
 			}
-			if (ip_metadata_changed(ip))
-				metadata_changed();
+            DEBUG("");
+			if (ip_metadata_changed(ip)) {
+                metadata_changed();
+            }
+            DEBUG("");
 
 			/* buffer_fill with 0 count marks current chunk filled */
 			buffer_fill(nr_read);
@@ -1018,13 +1050,13 @@ void player_init(void)
 	BUG_ON(rc);
 	rc = pthread_attr_setschedpolicy(&attr, SCHED_RR);
 	if (rc) {
-		d_print("could not set real-time scheduling priority: %s\n", strerror(rc));
+		DEBUG ("could not set real-time scheduling priority: %s\n", strerror(rc));
 	} else {
 		struct sched_param param;
 
-		d_print("using real-time scheduling\n");
+		DEBUG ("using real-time scheduling\n");
 		param.sched_priority = sched_get_priority_max(SCHED_RR);
-		d_print("setting priority to %d\n", param.sched_priority);
+		DEBUG ("setting priority to %d\n", param.sched_priority);
 		rc = pthread_attr_setschedparam(&attr, &param);
 		BUG_ON(rc);
 		attrp = &attr;
@@ -1263,7 +1295,7 @@ void player_seek(double offset, int relative, int start_playing)
 					new_pos = 0.0;
 			}
 		}
-/* 		d_print("seeking %g/%g (%g from eof)\n", new_pos, duration, duration - new_pos); */
+/* 		DEBUG ("seeking %g/%g (%g from eof)\n", new_pos, duration, duration - new_pos); */
 		rc = ip_seek(ip, new_pos);
 		if (rc == 0) {
 			LOG_DEBUG ("doing op_drop after seek");

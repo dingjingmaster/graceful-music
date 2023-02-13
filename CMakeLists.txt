@@ -4,14 +4,21 @@ cmake_minimum_required(VERSION 3.24)
 
 set(CMAKE_C_STANDARD 11)
 
+set(DEBUG ON)
 set(PROJECT_VERSION_MAJOR 0)
 set(PROJECT_VERSION_MINOR 0)
 set(PROJECT_VERSION_PATCH 0)
 
-add_definitions(-w -g
+if (DEBUG)
+    set(INSTALL_NAME ${CMAKE_BINARY_DIR}/app/${PROJECT_NAME})
+else ()
+    set(INSTALL_NAME /usr/bin/${PROJECT_NAME})
+endif ()
+add_definitions(-w -g -O0 -rdynamic -Wl,--export-dynamic
         -D PACKAGE_NAME=\\"${PROJECT_NAME}\\"
         -D G_LOG_DOMAIN=\\"${PROJECT_NAME}\\"
         -D VERSION=\\"${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\\"
+        -D INSTALL_NAME=\\"${INSTALL_NAME}\\"
 #        -D DATADIR \\"/usr/share\\"
 #        -D LIBDIR \\"/usr/lib\\"
         )

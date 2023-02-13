@@ -1,8 +1,10 @@
 #include "window.h"
-#include "options.h"
-#include "xmalloc.h"
+
+#include "log.h"
 #include "debug.h"
 #include "utils.h"
+#include "options.h"
+#include "xmalloc.h"
 
 #include <stdlib.h>
 
@@ -477,6 +479,11 @@ void window_half_page_up(struct window *win)
 
 static struct iter window_bottom(struct window *win)
 {
+    struct iter it;
+    if (!win)   {
+        return it;
+    }
+
 	struct iter bottom = win->top;
 	struct iter iter = win->top;
 	int down;
@@ -547,6 +554,7 @@ void window_scroll_down(struct window *win)
 
 void window_scroll_up(struct window *win)
 {
+    LOG_DEBUG("");
 	struct iter top = win->top;
 	if (!win->get_prev(&top)) return;
 	struct iter bot = window_bottom(win);

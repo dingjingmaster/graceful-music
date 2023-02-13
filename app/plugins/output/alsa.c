@@ -177,7 +177,7 @@ out:
     return rc;
 }
 
-static int op_alsa_open(sample_format_t sf, const ChannelPosition* channel_map)
+static int op_alsa_open(sample_format_t sf, const ChannelPosition* channelMap)
 {
     int rc;
 
@@ -186,6 +186,7 @@ static int op_alsa_open(sample_format_t sf, const ChannelPosition* channel_map)
 
     rc = snd_pcm_open(&alsa_handle, alsa_dsp_device, SND_PCM_STREAM_PLAYBACK, 0);
     if (rc < 0) {
+        ERROR ("snd_pcm_open error, exit");
         goto error;
     }
 
@@ -381,10 +382,18 @@ static const OutputPluginOpt options[] = {
 static const int priority = 0;
 static const unsigned int abiVersion = OUTPUT_ABI_VERSION;
 
+extern MixerPluginOps mixerOps;
+extern MixerPluginOpt mixerOpts;
+
 void alsa_output_register (OutputPlugin* plugin)
 {
     plugin->name = name;
     plugin->pcmOps = &ops;
     plugin->abiVersion = abiVersion;
     plugin->pcmOptions = &options;
+    plugin->pcmInitialized = 0;
+    plugin->mixerInitialized = 0;
+
+    plugin->mixerOps = &mixerOps;
+    plugin->mixerOptions = &mixerOpts;
 }

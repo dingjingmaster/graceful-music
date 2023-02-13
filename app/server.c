@@ -344,9 +344,9 @@ void server_init(char *address)
 	if (strchr(address, '/')) {
 		addr.sa.sa_family = AF_UNIX;
 		strncpy(addr.un.sun_path, address, sizeof(addr.un.sun_path) - 1);
-
 		addrlen = sizeof(struct sockaddr_un);
-	} else {
+	}
+    else {
 		const struct addrinfo hints = {
 			.ai_socktype = SOCK_STREAM
 		};
@@ -363,6 +363,7 @@ void server_init(char *address)
 		if (rc != 0) {
             DIE ("getaddrinfo: %s", gai_strerror(rc));
         }
+
 		memcpy(&addr.sa, result->ai_addr, result->ai_addrlen);
 		addrlen = result->ai_addrlen;
 		freeaddrinfo(result);

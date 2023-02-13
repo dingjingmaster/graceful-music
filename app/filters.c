@@ -67,8 +67,8 @@ static const struct searchable_ops filters_search_ops = {
 
 static void free_filter(struct filter_entry *e)
 {
-	free(e->name);
-	free(e->filter);
+	if (e->name)        free(e->name);
+	if (e->filter)      free(e->filter);
 	free(e);
 }
 

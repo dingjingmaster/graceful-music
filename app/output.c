@@ -257,6 +257,7 @@ int op_select_any(void)
 int op_open (SampleFormat sf, const ChannelPosition* channelMap)
 {
 	if (gOutputPlugin == NULL) {
+        ERROR("OUTPUT_ERROR_NOT_INITIALIZED")
         return -OUTPUT_ERROR_NOT_INITIALIZED;
     }
 
