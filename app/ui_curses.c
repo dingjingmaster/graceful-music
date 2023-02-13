@@ -2245,7 +2245,7 @@ static void init_curses(void)
 		use_default_colors();
 #endif
 	}
-	DEBUG ("Number of supported colors: %d\n", COLORS);
+	DEBUG ("Number of supported colors: %d", COLORS);
 	ui_initialized = 1;
 
 	/* this was disabled while initializing because it needs to be
@@ -2256,7 +2256,7 @@ static void init_curses(void)
 	ptr = tcap_buffer;
 	t_ts = tgetstr("ts", &ptr);
 	t_fs = tgetstr("fs", &ptr);
-	DEBUG ("ts: %d fs: %d\n", !!t_ts, !!t_fs);
+	DEBUG ("ts: %d fs: %d", !!t_ts, !!t_fs);
 
 	if (!t_fs)
 		t_ts = NULL;

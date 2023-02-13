@@ -344,7 +344,6 @@ static void channel_map_init_flac(int channels, ChannelPosition* map)
 
 static int flac_open (InputPluginData* ip_data)
 {
-    DEBUG("start");
     FlacPrivate* p = NULL;
 
     Dec *dec = F(new)();
@@ -415,24 +414,18 @@ static int flac_open (InputPluginData* ip_data)
     channel_map_init_flac(sf_get_channels(ip_data->sf), ip_data->channelMap);
     DEBUG ("sr: %d, ch: %d, bits: %d", sf_get_rate(ip_data->sf), channels, bits);
 
-    DEBUG("OK");
     return 0;
 }
 
 static int flac_close(InputPluginData* ip_data)
 {
-    DEBUG("START");
-
     free_private(ip_data);
-
-    DEBUG("OK");
 
     return 0;
 }
 
 static int flac_read (InputPluginData* ip_data, char *buffer, int count)
 {
-    DEBUG("START");
     FlacPrivate* p = ip_data->private;
     int avail;
 
@@ -464,7 +457,6 @@ static int flac_read (InputPluginData* ip_data, char *buffer, int count)
         p->bufWritePos = 0;
     }
 
-    DEBUG("OK");
 
     return count;
 }
@@ -474,7 +466,6 @@ static int flac_read (InputPluginData* ip_data, char *buffer, int count)
  */
 static int flac_seek (InputPluginData* ip_data, double offset)
 {
-    DEBUG("START");
     FlacPrivate* p = ip_data->private;
     p->bufReadPos = 0;
     p->bufWritePos = 0;
@@ -489,14 +480,12 @@ static int flac_seek (InputPluginData* ip_data, double offset)
         }
         return -INPUT_ERROR_ERRNO;
     }
-    DEBUG("OK");
 
     return 0;
 }
 
 static int flac_read_comments (InputPluginData* ip_data, KeyValue** comments)
 {
-    DEBUG("START");
     FlacPrivate* p = ip_data->private;
 
     if (p->comments) {
@@ -504,50 +493,34 @@ static int flac_read_comments (InputPluginData* ip_data, KeyValue** comments)
     } else {
         *comments = key_value_new(0);
     }
-    DEBUG("OK");
 
     return 0;
 }
 
 static int flac_duration (InputPluginData* ip_data)
 {
-    DEBUG("START");
-
     FlacPrivate* p= ip_data->private;
-
-    DEBUG("OK");
 
     return (int) p->duration;
 }
 
 static long flac_bitrate (InputPluginData* ip_data)
 {
-    DEBUG("START");
-
     FlacPrivate* p= ip_data->private;
-
-    DEBUG("OK");
 
     return p->bitrate;
 }
 
 static char* flac_codec (InputPluginData* ipData)
 {
-    DEBUG("START");
-
     (void*) ipData;
-
-    DEBUG("OK");
 
     return xstrdup("flac");
 }
 
 static char* flac_codec_profile (InputPluginData* ipData)
 {
-    DEBUG("START");
     /* maybe identify compression-level over min/max blocksize/framesize */
-    DEBUG("OK");
-
     return NULL;
 }
 

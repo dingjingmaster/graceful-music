@@ -863,9 +863,7 @@ static void *consumer_loop(void *arg)
 			consumer_unlock();
 			continue;
 		}
-        DEBUG("");
 		space = op_buffer_space();
-        DEBUG("");
 		if (space < 0) {
 			DEBUG ("op_buffer_space returned %d %s\n", space, space == -1 ? strerror(errno) : "");
 
@@ -877,7 +875,7 @@ static void *consumer_loop(void *arg)
 			consumer_unlock();
 			continue;
 		}
-        DEBUG ("BS: %6d %3d\n", space, space * 1000 / (44100 * 2 * 2));
+        //DEBUG ("BS: %6d %3d", space, space * 1000 / (44100 * 2 * 2));
 
 		while (1) {
 			if (space == 0) {
@@ -886,9 +884,7 @@ static void *consumer_loop(void *arg)
 				ms_sleep(25);
 				break;
 			}
-            DEBUG("");
 			size = buffer_get_rpos(&rpos);
-            DEBUG("");
 			if (size == 0) {
 				producer_lock();
 				if (producer_status != PS_PLAYING) {
@@ -897,25 +893,19 @@ static void *consumer_loop(void *arg)
 					break;
 				}
 				/* must recheck rpos */
-                DEBUG("");
 				size = buffer_get_rpos(&rpos);
-                DEBUG("");
 				if (size == 0) {
 					/* OK. now it's safe to check if we are at EOF */
 					if (ip_eof(ip)) {
 						/* EOF */
-                        DEBUG("");
 						_consumer_handle_eof();
-                        DEBUG("");
 						producer_unlock();
 						consumer_unlock();
 						break;
 					} else {
 						/* possible underrun */
 						producer_unlock();
-                        DEBUG("");
 						_consumer_position_update();
-                        DEBUG("");
 						consumer_unlock();
 /* 						DEBUG ("possible underrun\n"); */
 						ms_sleep(10);
@@ -932,7 +922,7 @@ static void *consumer_loop(void *arg)
 				scale_samples(rpos, (unsigned int *)&size);
 			rc = op_write(rpos, size);
 			if (rc < 0) {
-				DEBUG ("op_write returned %d %s\n", rc, rc == -1 ? strerror(errno) : "");
+				DEBUG ("op_write returned %d %s", rc, rc == -1 ? strerror(errno) : "");
 
 				/* try to reopen */
 				op_close();
@@ -942,9 +932,7 @@ static void *consumer_loop(void *arg)
 				consumer_unlock();
 				break;
 			}
-            DEBUG("");
 			buffer_consume(rc);
-            DEBUG("");
 			consumer_pos += rc;
 			space -= rc;
 		}
@@ -971,7 +959,6 @@ static void *producer_loop(void *arg)
             break;
         }
 
-        DEBUG("");
 		if (producer_status == PS_UNLOADED ||
 		    producer_status == PS_PAUSED ||
 		    producer_status == PS_STOPPED || ip_eof(ip)) {
@@ -979,19 +966,15 @@ static void *producer_loop(void *arg)
 			producer_unlock();
 			continue;
 		}
-        DEBUG("");
 		for (i = 0; ; i++) {
 			size = buffer_get_wpos(&wpos);
 			if (size == 0) {
 				/* buffer is full */
 				producer_unlock();
 				ms_sleep(50);
-                DEBUG("");
 				break;
 			}
-            DEBUG("");
 			nr_read = ip_read(ip, wpos, size);
-            DEBUG("");
 			if (nr_read < 0) {
 				if (nr_read != -1 || errno != EAGAIN) {
 					player_ip_error(nr_read, "reading file %s", ip_get_filename(ip));
@@ -1000,15 +983,12 @@ static void *producer_loop(void *arg)
 				} else {
 					producer_unlock();
 					ms_sleep(50);
-                    DEBUG("");
 					break;
 				}
 			}
-            DEBUG("");
 			if (ip_metadata_changed(ip)) {
                 metadata_changed();
             }
-            DEBUG("");
 
 			/* buffer_fill with 0 count marks current chunk filled */
 			buffer_fill(nr_read);
