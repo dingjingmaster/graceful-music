@@ -4,7 +4,9 @@
 
 #include "interface.h"
 
+#include "input/aac.h"
 #include "input/flac.h"
+#include "input/ffmpeg.h"
 
 #include "output/alsa.h"
 
@@ -20,7 +22,9 @@ static bool gOutputRegisted = false;
 
 void input_plugin_register()
 {
+    REGISTER_INPUT_PLUGIN(aac);
     REGISTER_INPUT_PLUGIN(flac);
+    REGISTER_INPUT_PLUGIN(ffmpeg);
 
     gInputRegisted = true;
 }

@@ -63,7 +63,7 @@ struct _InputPlugin
 {
     /* 插件需要提供的功能 - 开始 */
     bool                                isExtension;
-    char*                               name;
+    const char*                         name;
     int                                 priority;
     const char* const*                  mimeType;           // 以 NULL 结束
     const char* const*                  extensions;         // 以 NULL 结束
