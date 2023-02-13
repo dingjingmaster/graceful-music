@@ -34,10 +34,10 @@
  * Hardware is disconnected
  * SND_PCM_STATE_DISCONNECTED = 8,
  */
+#include "log.h"
 #include "../utils.h"
 #include "../interface.h"
 #include "../common/sf.h"
-#include "../common/log.h"
 #include "../common/xmalloc.h"
 
 #define ALSA_PCM_NEW_HW_PARAMS_API
@@ -45,17 +45,17 @@
 
 #include <alsa/asoundlib.h>
 
-static SampleFormat             alsa_sf;
-static snd_pcm_t*               alsa_handle;
-static snd_pcm_format_t         alsa_fmt;
-static int                      alsa_can_pause;
+static SampleFormat             alsaSf;
+static snd_pcm_t*               alsaHandle;
+static snd_pcm_format_t         alsaFmt;
+static int                      alsaCanPause;
 static snd_pcm_status_t*        status;
 
 /* bytes (bits * channels / 8) */
-static int                      alsa_frame_size;
+static int                      alsaFrameSize;
 
 /* configuration */
-static char*                    alsa_dsp_device = NULL;
+static char*                    alsaDspDevice = "default";
 
 
 static int alsa_error_to_op_error (int err)
@@ -83,14 +83,14 @@ static int op_alsa_init (void)
 
     snd_lib_error_set_handler(error_handler);
 
-    if (alsa_dsp_device == NULL) {
-        alsa_dsp_device = xstrdup("default");
+    if (alsaDspDevice == NULL) {
+        alsaDspDevice = xstrdup("default");
     }
 
     rc = snd_pcm_status_malloc(&status);
     if (rc < 0) {
-        free(alsa_dsp_device);
-        alsa_dsp_device = NULL;
+        free(alsaDspDevice);
+        alsaDspDevice = NULL;
         errno = ENOMEM;
         return -OUTPUT_ERROR_ERRNO;
     }
@@ -101,8 +101,8 @@ static int op_alsa_init (void)
 static int op_alsa_exit (void)
 {
     snd_pcm_status_free (status);
-    free (alsa_dsp_device);
-    alsa_dsp_device = NULL;
+    free (alsaDspDevice);
+    alsaDspDevice = NULL;
 
     return OUTPUT_ERROR_SUCCESS;
 }
@@ -119,50 +119,50 @@ static int alsa_set_hw_params (void)
     snd_pcm_hw_params_malloc(&hwparams);
 
     cmd = "snd_pcm_hw_params_any";
-    rc = snd_pcm_hw_params_any(alsa_handle, hwparams);
+    rc = snd_pcm_hw_params_any(alsaHandle, hwparams);
     if (rc < 0) {
         goto error;
     }
 
     cmd = "snd_pcm_hw_params_set_buffer_time_max";
-    rc = snd_pcm_hw_params_set_buffer_time_max(alsa_handle, hwparams, &buffer_time_max, &dir);
+    rc = snd_pcm_hw_params_set_buffer_time_max(alsaHandle, hwparams, &buffer_time_max, &dir);
     if (rc < 0) {
         goto error;
     }
 
-    alsa_can_pause = snd_pcm_hw_params_can_pause(hwparams);
-    DEBUG ("can pause = %d", alsa_can_pause);
+    alsaCanPause = snd_pcm_hw_params_can_pause(hwparams);
+    DEBUG ("can pause = %d", alsaCanPause);
 
     cmd = "snd_pcm_hw_params_set_access";
-    rc = snd_pcm_hw_params_set_access(alsa_handle, hwparams, SND_PCM_ACCESS_RW_INTERLEAVED);
+    rc = snd_pcm_hw_params_set_access(alsaHandle, hwparams, SND_PCM_ACCESS_RW_INTERLEAVED);
     if (rc < 0) {
         goto error;
     }
 
-    alsa_fmt = snd_pcm_build_linear_format(sf_get_bits(alsa_sf), sf_get_bits(alsa_sf), sf_get_signed(alsa_sf) ? 0 : 1, sf_get_bigendian(alsa_sf));
+    alsaFmt = snd_pcm_build_linear_format(sf_get_bits(alsaSf), sf_get_bits(alsaSf), sf_get_signed(alsaSf) ? 0 : 1, sf_get_bigendian(alsaSf));
     cmd = "snd_pcm_hw_params_set_format";
-    rc = snd_pcm_hw_params_set_format(alsa_handle, hwparams, alsa_fmt);
+    rc = snd_pcm_hw_params_set_format(alsaHandle, hwparams, alsaFmt);
     if (rc < 0) {
         goto error;
     }
 
     cmd = "snd_pcm_hw_params_set_channels";
-    rc = snd_pcm_hw_params_set_channels(alsa_handle, hwparams, sf_get_channels(alsa_sf));
+    rc = snd_pcm_hw_params_set_channels(alsaHandle, hwparams, sf_get_channels(alsaSf));
     if (rc < 0) {
         goto error;
     }
 
     cmd = "snd_pcm_hw_params_set_rate";
-    rate = sf_get_rate(alsa_sf);
+    rate = sf_get_rate(alsaSf);
     dir = 0;
-    rc = snd_pcm_hw_params_set_rate_near(alsa_handle, hwparams, &rate, &dir);
+    rc = snd_pcm_hw_params_set_rate_near(alsaHandle, hwparams, &rate, &dir);
     if (rc < 0) {
         goto error;
     }
     DEBUG ("rate=%d", rate);
 
     cmd = "snd_pcm_hw_params";
-    rc = snd_pcm_hw_params(alsa_handle, hwparams);
+    rc = snd_pcm_hw_params(alsaHandle, hwparams);
     if (rc < 0) {
         goto error;
     }
@@ -177,16 +177,14 @@ out:
     return rc;
 }
 
-static int op_alsa_open(sample_format_t sf, const ChannelPosition* channelMap)
+static int op_alsa_open(SampleFormat sf, const ChannelPosition* channelMap)
 {
-    int rc;
+    alsaSf = sf;
+    alsaFrameSize = sf_get_frame_size(alsaSf);
 
-    alsa_sf = sf;
-    alsa_frame_size = sf_get_frame_size(alsa_sf);
-
-    rc = snd_pcm_open(&alsa_handle, alsa_dsp_device, SND_PCM_STREAM_PLAYBACK, 0);
+    int rc = snd_pcm_open(&alsaHandle, alsaDspDevice, SND_PCM_STREAM_PLAYBACK, 0);
     if (rc < 0) {
-        ERROR ("snd_pcm_open error, exit");
+        ERROR ("snd_pcm_open error, exit, error: '%s'", g_strerror (errno));
         goto error;
     }
 
@@ -195,7 +193,7 @@ static int op_alsa_open(sample_format_t sf, const ChannelPosition* channelMap)
         goto close_error;
     }
 
-    rc = snd_pcm_prepare(alsa_handle);
+    rc = snd_pcm_prepare(alsaHandle);
     if (rc < 0) {
         goto close_error;
     }
@@ -203,7 +201,7 @@ static int op_alsa_open(sample_format_t sf, const ChannelPosition* channelMap)
     return OUTPUT_ERROR_SUCCESS;
 
 close_error:
-    snd_pcm_close(alsa_handle);
+    snd_pcm_close(alsaHandle);
 
 error:
     return alsa_error_to_op_error(rc);
@@ -215,10 +213,10 @@ static int op_alsa_close(void)
 {
     int rc;
 
-    rc = snd_pcm_drain(alsa_handle);
+    rc = snd_pcm_drain(alsaHandle);
     DEBUG ("snd_pcm_drain, rc: %d", rc);
 
-    rc = snd_pcm_close(alsa_handle);
+    rc = snd_pcm_close(alsaHandle);
     DEBUG ("snd_pcm_close, rc: %d", rc);
 
     return alsa_error_to_op_error(rc);
@@ -228,10 +226,10 @@ static int op_alsa_drop(void)
 {
     int rc;
 
-    rc = snd_pcm_drop(alsa_handle);
+    rc = snd_pcm_drop(alsaHandle);
     DEBUG ("snd_pcm_drop, rc: %d", rc);
 
-    rc = snd_pcm_prepare(alsa_handle);
+    rc = snd_pcm_prepare(alsaHandle);
     DEBUG ("snd_pcm_prepare, rc: %d", rc);
 
     /* drop set state to SETUP
@@ -247,9 +245,9 @@ static int op_alsa_write(const char *buffer, int count)
     int rc, len;
     int recovered = 0;
 
-    len = count / alsa_frame_size;
+    len = count / alsaFrameSize;
 again:
-    rc = snd_pcm_writei(alsa_handle, buffer, len);
+    rc = snd_pcm_writei(alsaHandle, buffer, len);
     if (rc < 0) {
         // rc _should_ be either -EBADFD, -EPIPE or -ESTRPIPE
         if (!recovered && (rc == -EINTR || rc == -EPIPE || rc == -ESTRPIPE)) {
@@ -257,7 +255,7 @@ again:
             recovered++;
             // this handles -EINTR, -EPIPE and -ESTRPIPE
             // for other errors it just returns the error code
-            rc = snd_pcm_recover(alsa_handle, rc, 1);
+            rc = snd_pcm_recover(alsaHandle, rc, 1);
             if (!rc) {
                 goto again;
             }
@@ -267,7 +265,7 @@ again:
         return alsa_error_to_op_error(rc);
     }
 
-    rc *= alsa_frame_size;
+    rc *= alsaFrameSize;
 
     return rc;
 }
@@ -277,42 +275,42 @@ static int op_alsa_buffer_space(void)
     int rc;
     snd_pcm_sframes_t f;
 
-    f = snd_pcm_avail_update(alsa_handle);
+    f = snd_pcm_avail_update(alsaHandle);
     while (f < 0) {
         DEBUG ("snd_pcm_avail_update failed: %s, trying to recover", snd_strerror(f));
-        rc = snd_pcm_recover(alsa_handle, f, 1);
+        rc = snd_pcm_recover(alsaHandle, f, 1);
         if (rc < 0) {
             DEBUG ("recovery failed: %s", snd_strerror(rc));
             return alsa_error_to_op_error(rc);
         }
-        f = snd_pcm_avail_update(alsa_handle);
+        f = snd_pcm_avail_update(alsaHandle);
     }
 
-    return f * alsa_frame_size;
+    return f * alsaFrameSize;
 }
 
 static int op_alsa_pause(void)
 {
     int rc = 0;
-    if (alsa_can_pause) {
-        snd_pcm_state_t state = snd_pcm_state(alsa_handle);
+    if (alsaCanPause) {
+        snd_pcm_state_t state = snd_pcm_state(alsaHandle);
         if (state == SND_PCM_STATE_PREPARED) {
             // state is PREPARED -> no need to pause
         } else if (state == SND_PCM_STATE_RUNNING) {
             // state is RUNNING - > pause
 
             // infinite timeout
-            rc = snd_pcm_wait(alsa_handle, -1);
+            rc = snd_pcm_wait(alsaHandle, -1);
             DEBUG ("snd_pcm_wait, rc: %d", rc);
 
-            rc = snd_pcm_pause(alsa_handle, 1);
+            rc = snd_pcm_pause(alsaHandle, 1);
             DEBUG ("snd_pcm_pause, rc: %d", rc);
         } else {
             DEBUG ("error: state is not RUNNING or PREPARED");
             rc = -OUTPUT_ERROR_INTERNAL;
         }
     } else {
-        rc = snd_pcm_drop(alsa_handle);
+        rc = snd_pcm_drop(alsaHandle);
         DEBUG ("snd_pcm_drop, rc: %d", rc);
     }
     return alsa_error_to_op_error(rc);
@@ -321,25 +319,25 @@ static int op_alsa_pause(void)
 static int op_alsa_unpause(void)
 {
     int rc = 0;
-    if (alsa_can_pause) {
-        snd_pcm_state_t state = snd_pcm_state(alsa_handle);
+    if (alsaCanPause) {
+        snd_pcm_state_t state = snd_pcm_state(alsaHandle);
         if (state == SND_PCM_STATE_PREPARED) {
             // state is PREPARED -> no need to unpause
         } else if (state == SND_PCM_STATE_PAUSED) {
             // state is PAUSED -> unpause
 
             // infinite timeout
-            rc = snd_pcm_wait(alsa_handle, -1);
+            rc = snd_pcm_wait(alsaHandle, -1);
             DEBUG ("snd_pcm_wait, rc: %d", rc);
 
-            rc = snd_pcm_pause(alsa_handle, 0);
+            rc = snd_pcm_pause(alsaHandle, 0);
             DEBUG ("snd_pcm_pause, rc: %d", rc);
         } else {
             DEBUG ("error: state is not PAUSED nor PREPARED");
             rc = -OUTPUT_ERROR_INTERNAL;
         }
     } else {
-        rc = snd_pcm_prepare(alsa_handle);
+        rc = snd_pcm_prepare(alsaHandle);
         DEBUG ("snd_pcm_prepare, rc: %d", rc);
     }
     return alsa_error_to_op_error(rc);
@@ -347,16 +345,16 @@ static int op_alsa_unpause(void)
 
 static int op_alsa_set_device(const char *val)
 {
-    free(alsa_dsp_device);
-    alsa_dsp_device = xstrdup(val);
+    free(alsaDspDevice);
+    alsaDspDevice = xstrdup(val);
 
     return OUTPUT_ERROR_SUCCESS;
 }
 
 static int op_alsa_get_device (char** val)
 {
-    if (alsa_dsp_device)
-        *val = xstrdup(alsa_dsp_device);
+    if (alsaDspDevice)
+        *val = xstrdup(alsaDspDevice);
     return OUTPUT_ERROR_SUCCESS;
 }
 
