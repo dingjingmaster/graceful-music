@@ -78,17 +78,17 @@ int soft_vol_r;
 static sample_format_t buffer_sf;
 static CHANNEL_MAP(buffer_channel_map);
 
-static pthread_t producer_thread;
+static pthread_t gProducerThread;
 static pthread_mutex_t producer_mutex = CMUS_MUTEX_INITIALIZER;
-static pthread_cond_t producer_playing = CMUS_COND_INITIALIZER;
-static int producer_running = 1;
+static pthread_cond_t gProducerPlaying = CMUS_COND_INITIALIZER;
+static int gProducerRunning = 1;
 static enum producer_status producer_status = PS_UNLOADED;
 static struct input_plugin *ip = NULL;
 
-static pthread_t consumer_thread;
+static pthread_t consumerThread;
 static pthread_mutex_t consumer_mutex = CMUS_MUTEX_INITIALIZER;
-static pthread_cond_t consumer_playing = CMUS_COND_INITIALIZER;
-static int consumer_running = 1;
+static pthread_cond_t gConsumerPlaying = CMUS_COND_INITIALIZER;
+static int gConsumerRunning = 1;
 static enum consumer_status consumer_status = CS_STOPPED;
 static unsigned long consumer_pos = 0;
 
@@ -129,7 +129,7 @@ static void reset_buffer(void)
 	buffer_reset();
 	consumer_pos = 0;
 	scale_pos = 0;
-	pthread_cond_broadcast(&producer_playing);
+	pthread_cond_broadcast(&gProducerPlaying);
     DEBUG("ok");
 }
 
@@ -619,7 +619,7 @@ static void _producer_status_update(enum producer_status status)
 {
     DEBUG ("start");
 	producer_status =  status;
-	pthread_cond_broadcast(&producer_playing);
+	pthread_cond_broadcast(&gProducerPlaying);
     DEBUG ("OK");
 }
 
@@ -709,7 +709,7 @@ static void _producer_set_file(struct track_info *ti)
 static void _consumer_status_update(enum consumer_status status)
 {
 	consumer_status = status;
-	pthread_cond_broadcast(&consumer_playing);
+	pthread_cond_broadcast(&gConsumerPlaying);
 }
 
 static void _consumer_play(void)
@@ -854,12 +854,12 @@ static void *consumer_loop(void *arg)
 		char *rpos;
 
 		consumer_lock();
-		if (!consumer_running) {
+		if (!gConsumerRunning) {
             break;
         }
 
 		if (consumer_status == CS_PAUSED || consumer_status == CS_STOPPED) {
-			pthread_cond_wait(&consumer_playing, &consumer_mutex);
+			pthread_cond_wait(&gConsumerPlaying, &consumer_mutex);
 			consumer_unlock();
 			continue;
 		}
@@ -955,14 +955,14 @@ static void *producer_loop(void *arg)
 		char *wpos;
 
 		producer_lock();
-		if (!producer_running) {
+		if (!gProducerRunning) {
             break;
         }
 
 		if (producer_status == PS_UNLOADED ||
 		    producer_status == PS_PAUSED ||
 		    producer_status == PS_STOPPED || ip_eof(ip)) {
-			pthread_cond_wait(&producer_playing, &producer_mutex);
+			pthread_cond_wait(&gProducerPlaying, &producer_mutex);
 			producer_unlock();
 			continue;
 		}
@@ -1028,7 +1028,6 @@ void player_init(void)
 		WARNING ("could not set real-time scheduling priority: %s", strerror(rc));
 	} else {
 		struct sched_param param;
-
 		DEBUG ("using real-time scheduling");
 		param.sched_priority = sched_get_priority_max(SCHED_RR);
 		DEBUG ("setting priority to %d", param.sched_priority);
@@ -1037,13 +1036,14 @@ void player_init(void)
 		attrP = &attr;
 	}
 
-	rc = pthread_create(&producer_thread, NULL, producer_loop, NULL);
 
-	rc = pthread_create(&consumer_thread, attrP, consumer_loop, NULL);
+	rc = pthread_create(&gProducerThread, NULL, producer_loop, NULL);
+	rc = pthread_create(&consumerThread, attrP, consumer_loop, NULL);
 	if (rc && attrP) {
 		DEBUG ("could not create thread using real-time scheduling: %s", strerror(rc));
-		rc = pthread_create(&consumer_thread, NULL, consumer_loop, NULL);
+		rc = pthread_create(&consumerThread, NULL, consumer_loop, NULL);
 	}
+
 
 	/* update player_info_priv.cont etc. */
 	player_lock();
@@ -1056,16 +1056,14 @@ void player_exit(void)
 	int rc;
 
 	player_lock();
-	consumer_running = 0;
-	pthread_cond_broadcast(&consumer_playing);
-	producer_running = 0;
-	pthread_cond_broadcast(&producer_playing);
+	gConsumerRunning = 0;
+	pthread_cond_broadcast(&gConsumerPlaying);
+	gProducerRunning = 0;
+	pthread_cond_broadcast(&gProducerPlaying);
 	player_unlock();
 
-	rc = pthread_join(consumer_thread, NULL);
-	BUG_ON(rc);
-	rc = pthread_join(producer_thread, NULL);
-	BUG_ON(rc);
+	rc = pthread_join(consumerThread, NULL);
+	rc = pthread_join(gProducerThread, NULL);
 	buffer_free();
 }
 
