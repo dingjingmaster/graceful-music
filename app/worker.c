@@ -25,7 +25,7 @@ enum worker_state {
 };
 
 static LIST_HEAD(worker_job_head);
-static pthread_mutex_t worker_mutex = CMUS_MUTEX_INITIALIZER;
+static pthread_mutex_t worker_mutex = GM_MUTEX_INITIALIZER;
 static pthread_cond_t worker_cond = PTHREAD_COND_INITIALIZER;
 static pthread_t worker_thread;
 static enum worker_state state = WORKER_PAUSED;
@@ -38,8 +38,8 @@ static int cancel_current = 0;
  */
 static struct worker_job *cur_job = NULL;
 
-#define worker_lock() cmus_mutex_lock(&worker_mutex)
-#define worker_unlock() cmus_mutex_unlock(&worker_mutex)
+#define worker_lock() gm_mutex_lock(&worker_mutex)
+#define worker_unlock() gm_mutex_unlock(&worker_mutex)
 
 static void *worker_loop(void *arg)
 {

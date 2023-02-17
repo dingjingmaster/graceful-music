@@ -1,10 +1,10 @@
 #ifndef CMUS_PL_H
 #define CMUS_PL_H
 
-#include "track_info.h"
 #include "window.h"
 #include "editable.h"
-#include "cmus.h"
+#include "track_info.h"
+#include "graceful-music.h"
 
 struct pl_list_info {
 	const char *name;

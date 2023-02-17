@@ -4,21 +4,23 @@
 
 #ifndef GRACEFUL_MUSIC_UTILS_H
 #define GRACEFUL_MUSIC_UTILS_H
-
 #include "compiler.h"
 #include "debug.h"
 
+#include <time.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <stdio.h>
-#include <time.h>
-#include <stdint.h>
+
+#include "log.h"
+
 #ifdef HAVE_BYTESWAP_H
 #include <byteswap.h>
 #endif
@@ -307,16 +309,16 @@ static inline void enable_stdio(void)
     close(_saved_stderr);
 }
 
-static inline void init_pipes(int *out, int *in)
+static inline void init_pipes(int* out, int* in)
 {
     int fds[2];
     int rc = pipe(fds);
-    BUG_ON(rc);
+    LOG_DEBUG ("pipe: rc = %d", rc);
     *out = fds[0];
     *in = fds[1];
     int flags = fcntl(*out, F_GETFL);
     rc = fcntl(*out, F_SETFL, flags | O_NONBLOCK);
-    BUG_ON(rc);
+    LOG_DEBUG ("fcntl: rc = %d", rc);
 }
 
 static inline void notify_via_pipe(int pipe)

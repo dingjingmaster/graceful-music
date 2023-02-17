@@ -1,6 +1,8 @@
 #include "log.h"
 #include "global.h"
 
+#include <stdbool.h>
+
 #include "job.h"
 #include "convert.h"
 #include "ui_curses.h"
@@ -11,7 +13,6 @@
 #include "play_queue.h"
 #include "browser.h"
 #include "filters.h"
-#include "cmus.h"
 #include "player.h"
 #include "output.h"
 #include "utils.h"
@@ -33,9 +34,11 @@
 #include "input.h"
 #include "file.h"
 #include "path.h"
-#include "mixer-interface.h"
 #include "mpris.h"
 #include "locking.h"
+#include "graceful-music.h"
+#include "mixer-interface.h"
+
 #ifdef HAVE_CONFIG
 #include "config/curses.h"
 #include "config/iconv.h"
@@ -74,7 +77,7 @@ char *tgoto(const char *cap, int col, int row);
 
 /* globals. documented in ui_curses.h */
 
-volatile sig_atomic_t cmus_running = 1;
+volatile sig_atomic_t gRunning = 1;
 int ui_initialized = 0;
 enum ui_input_mode input_mode = NORMAL_MODE;
 int cur_view = TREE_VIEW;
@@ -84,7 +87,8 @@ char *lib_filename = NULL;
 char *lib_ext_filename = NULL;
 char *play_queue_filename = NULL;
 char *play_queue_ext_filename = NULL;
-int using_utf8 = 0;
+
+bool gUsingUtf8 = false;
 
 extern char*        gCharset;
 
@@ -433,7 +437,7 @@ fallback:
 
 static void dump_print_buffer_no_clear(int row, int col)
 {
-	if (using_utf8) {
+	if (gUsingUtf8) {
 		(void) mvaddstr(row, col, print_buffer.buffer);
 	} else {
 		utf8_decode(print_buffer.buffer);
@@ -502,7 +506,7 @@ static void fill_track_fopts_track_info(struct track_info *info)
 {
 	char *filename;
 
-	if (using_utf8) {
+	if (gUsingUtf8) {
 		filename = info->filename;
 	} else {
 		utf8_encode_to_buf(info->filename);
@@ -836,7 +840,7 @@ static void print_filter(struct window *win, int row, struct iter *iter)
 	ch2 = stat_chars[e->sel_stat];
 
 	e_filter = e->filter;
-	if (!using_utf8) {
+	if (!gUsingUtf8) {
 		utf8_encode_to_buf(e_filter);
 		e_filter = conv_buffer;
 	}
@@ -1012,7 +1016,7 @@ static void update_editable_window(struct editable *e, const char *title, const 
 	gbuf_clear(&buf);
 
 	if (filename) {
-		if (using_utf8) {
+		if (gUsingUtf8) {
 			/* already UTF-8 */
 		} else {
 			utf8_encode_to_buf(filename);
@@ -1051,7 +1055,7 @@ static void update_browser_window(void)
 	gbuf_clear(&title);
 	char *dirname;
 
-	if (using_utf8) {
+	if (gUsingUtf8) {
 		/* already UTF-8 */
 		dirname = browser_dir;
 	} else {
@@ -1139,7 +1143,7 @@ static void do_update_statusline(void)
 
 static void dump_buffer(const char *buffer)
 {
-	if (using_utf8) {
+	if (gUsingUtf8) {
 		addstr(buffer);
 	} else {
 		utf8_decode(buffer);
@@ -1172,7 +1176,7 @@ static void do_update_commandline(void)
 	}
 
 	str = cmdline.line;
-	if (!using_utf8) {
+	if (!gUsingUtf8) {
 		/* cmdline.line actually pretends to be UTF-8 but all non-ASCII
 		 * characters are invalid UTF-8 so it really is in locale's
 		 * encoding.
@@ -1285,7 +1289,7 @@ static void do_update_titleline(void)
 					window_title_format, track_fopts);
 		}
 
-		if (using_utf8) {
+		if (gUsingUtf8) {
 			wtitle = print_buffer.buffer;
 		} else {
 			utf8_decode(print_buffer.buffer);
@@ -1308,7 +1312,7 @@ static int cmdline_cursor_column(void)
 	int cw, skip, s;
 
 	str = cmdline.line;
-	if (!using_utf8) {
+	if (!gUsingUtf8) {
 		/* see do_update_commandline */
 		utf8_encode_to_buf(cmdline.line);
 		str = conv_buffer;
@@ -1519,7 +1523,7 @@ enum ui_query_answer yes_no_query(const char *format, ...)
 	while (1) {
 		int ch = getch();
 		if (ch == ERR || ch == 0) {
-			if (!cmus_running) {
+			if (!gRunning) {
 				ret = UI_QUERY_ANSWER_ERROR;
 				break;
 			}
@@ -1753,8 +1757,9 @@ static int fill_status_program_track_info_args(char **argv, int i, struct track_
 
 static void spawn_status_program_inner(const char *status_text, struct track_info *ti)
 {
-	if (status_display_program == NULL || status_display_program[0] == 0)
-		return;
+	if (status_display_program == NULL || status_display_program[0] == 0) {
+        return;
+    }
 
 	char *argv[32];
 	int i = 0;
@@ -1769,10 +1774,12 @@ static void spawn_status_program_inner(const char *status_text, struct track_inf
 	}
 	argv[i++] = NULL;
 
-	if (spawn(argv, NULL, 0) == -1)
-		error_msg("couldn't run `%s': %s", status_display_program, strerror(errno));
-	for (i = 0; argv[i]; i++)
-		free(argv[i]);
+	if (spawn(argv, NULL, 0) == -1) {
+        ERROR ("couldn't run `%s': %s", status_display_program, strerror(errno));
+    }
+	for (i = 0; argv[i]; i++) {
+        free(argv[i]);
+    }
 }
 
 static void spawn_status_program(void)
@@ -1790,7 +1797,7 @@ static void sig_int(int sig)
 static void sig_shutdown(int sig)
 {
 	DEBUG ("sig_shutdown %d\n", sig);
-	cmus_running = 0;
+	gRunning = 0;
 }
 
 static volatile sig_atomic_t needs_to_resize = 0;
@@ -2052,7 +2059,7 @@ static void u_getch(void)
 	if (bit == 7) {
 		/* ascii */
 		u = ch;
-	} else if (using_utf8) {
+	} else if (gUsingUtf8) {
 		int count;
 
 		u = ch & ((1 << bit) - 1);
@@ -2082,7 +2089,7 @@ static void main_loop(void)
 } while(0)
 
 	fd_high = server_socket;
-	while (cmus_running) {
+	while (gRunning) {
 		fd_set set;
 		struct timeval tv;
 		int poll_mixer = 0;
@@ -2115,7 +2122,7 @@ static void main_loop(void)
 		FD_ZERO(&set);
 		SELECT_ADD_FD(0);
 		SELECT_ADD_FD(job_fd);
-		SELECT_ADD_FD(cmus_next_track_request_fd);
+		SELECT_ADD_FD(gNextTrackRequestFd);
 		SELECT_ADD_FD(server_socket);
 		if (mpris_fd != -1)
 			SELECT_ADD_FD(mpris_fd);
@@ -2202,8 +2209,8 @@ static void main_loop(void)
 		if (FD_ISSET(job_fd, &set))
 			job_handle();
 
-		if (FD_ISSET(cmus_next_track_request_fd, &set))
-			cmus_provide_next_track();
+		if (FD_ISSET(gNextTrackRequestFd, &set))
+			gm_provide_next_track();
 	}
 }
 
@@ -2297,7 +2304,7 @@ static void init_curses(void)
 static void init_all(void)
 {
 	gMainThread = pthread_self();
-	cmus_track_request_init();
+	gm_track_request_init();
 
 	server_init(gSocketPath);
 
@@ -2309,7 +2316,7 @@ static void init_all(void)
 
 	lib_init();
 	searchable = tree_searchable;
-	cmus_init();
+	gm_init();
 	pl_init();
 	browser_init();
 	filters_init();
@@ -2348,13 +2355,13 @@ static void init_all(void)
 
 	if (resume_cmus) {
 		resume_load();
-		cmus_add(play_queue_append, play_queue_autosave_filename,
+		gm_add(play_queue_append, play_queue_autosave_filename,
 				FILE_TYPE_PL, JOB_TYPE_QUEUE, 0, NULL);
 	} else {
 		set_view(start_view);
 	}
 
-	cmus_add(lib_add_track, lib_autosave_filename, FILE_TYPE_PL,
+	gm_add(lib_add_track, lib_autosave_filename, FILE_TYPE_PL,
 			JOB_TYPE_LIB, 0, NULL);
 
 	worker_start();
@@ -2369,11 +2376,11 @@ static void exit_all(void)
 	options_exit();
 
 	server_exit();
-	cmus_exit();
+	gm_exit();
 	if (resume_cmus)
-		cmus_save(play_queue_for_each, play_queue_autosave_filename,
+		gm_save(play_queue_for_each, play_queue_autosave_filename,
 				NULL);
-	cmus_save(lib_for_each, lib_autosave_filename, NULL);
+	gm_save(lib_for_each, lib_autosave_filename, NULL);
 
 	pl_exit();
 	player_exit();
@@ -2408,7 +2415,7 @@ static const char *usage =
 "Usage: %s [OPTION]...\n"
 "Curses based music player.\n"
 "\n"
-"      --listen ADDR   listen on ADDR instead of $CMUS_SOCKET or $XDG_RUNTIME_DIR/cmus-socket\n"
+"      --listen ADDR   listen on ADDR instead of $gm_SOCKET or $XDG_RUNTIME_DIR/cmus-socket\n"
 "                      ADDR is either a UNIX socket or host[:port]\n"
 "                      WARNING: using TCP/IP is insecure!\n"
 "      --plugins       list available plugins and exit\n"
@@ -2419,12 +2426,10 @@ static const char *usage =
 "Use cmus-remote to control cmus from command line.\n"
 "Report bugs to <cmus-devel@lists.sourceforge.net>.\n";
 
-int curses_main(int argc, char *argv[])
+int curses_main(int argc, char* argv[])
 {
-	int list_plugins = 0;
-
-	program_name = argv[0];
-	argv++;
+    bool listPlugins = 0;
+	++argv;
 
 #if 0
 	while (1) {
@@ -2457,14 +2462,14 @@ int curses_main(int argc, char *argv[])
 	}
 #endif
 
-    using_utf8 = 1;
+    gUsingUtf8 = 1;
 
 	misc_init();
 
 	ip_load_plugins();
 	op_load_plugins();
 
-	if (list_plugins) {
+	if (listPlugins) {
 		ip_dump_plugins();
 		op_dump_plugins();
 		return 0;

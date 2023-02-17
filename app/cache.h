@@ -1,8 +1,8 @@
 #ifndef CMUS_CACHE_H
 #define CMUS_CACHE_H
 
-#include "track_info.h"
 #include "locking.h"
+#include "track_info.h"
 
 extern struct fifo_mutex cache_mutex;
 

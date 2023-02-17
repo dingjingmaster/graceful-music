@@ -8,7 +8,7 @@ FILE(GLOB GM_SRC
         cache.h                     cache.c
         channelmap.h                channelmap.c
         cmdline.h                   cmdline.c
-        cmus.h                      cmus.c
+        cmus.h
         command_mode.h              command_mode.c
         comment.h                   comment.c
         cue.h                       cue.c
@@ -31,7 +31,7 @@ FILE(GLOB GM_SRC
         keyval.h                    keyval.c
         lib.h                       lib.c
         load_dir.h                  load_dir.c
-        locking.h                   locking.c
+        locking.h.bak locking.c
         mergesort.h                 mergesort.c
         misc.h                      misc.c
         options.h                   options.c
@@ -72,6 +72,7 @@ FILE(GLOB GM_SRC
         global.h
         log.h                       log.c
         utils.h                     utils.c
+        graceful-music.h            graceful-music.c
 )
 
 add_executable(graceful-music main.c ${GM_SRC} ${COMMON_SRC} ${PLUGINS_SRC})

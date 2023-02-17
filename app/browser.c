@@ -1,12 +1,13 @@
 #include "browser.h"
-#include "load_dir.h"
-#include "cmus.h"
-#include "xmalloc.h"
-#include "ui_curses.h"
+
 #include "file.h"
 #include "misc.h"
-#include "options.h"
 #include "uchar.h"
+#include "options.h"
+#include "xmalloc.h"
+#include "load_dir.h"
+#include "ui_curses.h"
+#include "graceful-music.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,7 +40,7 @@ static int normal_filter(const char *name, const struct stat *s)
 	}
 	if (S_ISDIR(s->st_mode))
 		return 1;
-	return cmus_is_supported(name);
+	return gm_is_supported(name);
 }
 
 /* filter out '.' */
@@ -118,7 +119,7 @@ static int do_browser_load(const char *name)
 	if (stat(name, &st))
 		return -1;
 
-	if (S_ISREG(st.st_mode) && cmus_is_playlist(name)) {
+	if (S_ISREG(st.st_mode) && gm_is_playlist(name)) {
 		char *buf;
 		ssize_t size;
 
@@ -134,7 +135,7 @@ static int do_browser_load(const char *name)
 			parent_dir_e->type = BROWSER_ENTRY_DIR;
 			list_add_tail(&parent_dir_e->node, &browser_head);
 
-			cmus_playlist_for_each(buf, size, 0, add_pl_line, NULL);
+			gm_playlist_for_each(buf, size, 0, add_pl_line, NULL);
 			munmap(buf, size);
 		}
 	} else if (S_ISDIR(st.st_mode)) {
@@ -385,15 +386,15 @@ void browser_enter(void)
 		browser_cd(e->name);
 	} else {
 		if (e->type == BROWSER_ENTRY_PLLINE) {
-			cmus_play_file(e->name);
+			gm_play_file(e->name);
 		} else {
 			char *filename;
 
 			filename = fullname(browser_dir, e->name);
-			if (cmus_is_playlist(filename)) {
+			if (gm_is_playlist(filename)) {
 				browser_cd_playlist(filename);
 			} else {
-				cmus_play_file(filename);
+				gm_play_file(filename);
 			}
 			free(filename);
 		}

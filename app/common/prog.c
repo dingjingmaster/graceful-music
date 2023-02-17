@@ -8,13 +8,11 @@
 #include <stdarg.h>
 #include <errno.h>
 
-char *program_name = NULL;
-
 void warn(const char *format, ...)
 {
 	va_list ap;
 
-	fprintf(stderr, "%s: ", program_name);
+	fprintf(stderr, "%s: ", PACKAGE_NAME);
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);
@@ -25,7 +23,7 @@ void warn_errno(const char *format, ...)
 	int e = errno;
 	va_list ap;
 
-	fprintf(stderr, "%s: ", program_name);
+	fprintf(stderr, "%s: ", PACKAGE_NAME);
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);
@@ -36,7 +34,7 @@ void CMUS_NORETURN die(const char *format, ...)
 {
 	va_list ap;
 
-	fprintf(stderr, "%s: ", program_name);
+	fprintf(stderr, "%s: ", PACKAGE_NAME);
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);
@@ -48,7 +46,7 @@ void CMUS_NORETURN die_errno(const char *format, ...)
 	int e = errno;
 	va_list ap;
 
-	fprintf(stderr, "%s: ", program_name);
+	fprintf(stderr, "%s: ", PACKAGE_NAME);
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);

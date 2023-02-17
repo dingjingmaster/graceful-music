@@ -13,7 +13,7 @@ int u_strcoll(const char *str1, const char *str2)
 {
 	int result;
 
-	if (using_utf8) {
+	if (gUsingUtf8) {
 		result = strcoll(str1, str2);
 	} else {
 		char *str1_locale = NULL, *str2_locale = NULL;
@@ -65,7 +65,7 @@ char *u_strcoll_key(const char *str)
 {
 	char *result = NULL;
 
-	if (using_utf8) {
+	if (gUsingUtf8) {
 		size_t xfrm_len = strxfrm(NULL, str, 0);
 		if ((ssize_t) xfrm_len >= 0 && xfrm_len < INT_MAX - 2) {
 			result = xnew(char, xfrm_len + 1);

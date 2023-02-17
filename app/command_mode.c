@@ -16,7 +16,6 @@
 #include "lib.h"
 #include "pl.h"
 #include "play_queue.h"
-#include "cmus.h"
 #include "worker.h"
 #include "keys.h"
 #include "xmalloc.h"
@@ -31,6 +30,7 @@
 #include "help.h"
 #include "mpris.h"
 #include "job.h"
+#include "graceful-music.h"
 #include "plugins/output-interface.h"
 
 #include <stdlib.h>
@@ -77,10 +77,10 @@ void view_clear(int view)
 void view_add(int view, char *arg, int prepend)
 {
 	char *tmp, *name;
-	enum file_type ft;
+	FileType ft;
 
 	tmp = expand_filename(arg);
-	ft = cmus_detect_ft(tmp, &name);
+	ft = gm_detect_ft(tmp, &name);
 	if (ft == FILE_TYPE_INVALID) {
 		error_msg("adding '%s': %s", tmp, strerror(errno));
 		free(tmp);
@@ -91,18 +91,16 @@ void view_add(int view, char *arg, int prepend)
 	switch (view) {
 	case TREE_VIEW:
 	case SORTED_VIEW:
-		cmus_add(lib_add_track, name, ft, JOB_TYPE_LIB, 0, NULL);
+		gm_add(lib_add_track, name, ft, JOB_TYPE_LIB, 0, NULL);
 		break;
 	case PLAYLIST_VIEW:
 		pl_add_file_to_marked_pl(name);
 		break;
 	case QUEUE_VIEW:
 		if (prepend) {
-			cmus_add(play_queue_prepend, name, ft, JOB_TYPE_QUEUE,
-					0, NULL);
+			gm_add(play_queue_prepend, name, ft, JOB_TYPE_QUEUE, 0, NULL);
 		} else {
-			cmus_add(play_queue_append, name, ft, JOB_TYPE_QUEUE, 0,
-					NULL);
+			gm_add(play_queue_append, name, ft, JOB_TYPE_QUEUE, 0, NULL);
 		}
 		break;
 	default:
@@ -114,7 +112,7 @@ void view_add(int view, char *arg, int prepend)
 static char *view_load_prepare(char *arg)
 {
 	char *name, *tmp = expand_filename(arg);
-	enum file_type ft = cmus_detect_ft(tmp, &name);
+	FileType ft = gm_detect_ft(tmp, &name);
 	if (ft == FILE_TYPE_INVALID) {
 		error_msg("loading '%s': %s", tmp, strerror(errno));
 		free(tmp);
@@ -143,8 +141,7 @@ void view_load(int view, char *arg)
 	case SORTED_VIEW:
 		worker_remove_jobs_by_type(JOB_TYPE_LIB);
 		editable_clear(&lib_editable);
-		cmus_add(lib_add_track, name, FILE_TYPE_PL, JOB_TYPE_LIB, 0,
-				NULL);
+		gm_add(lib_add_track, name, FILE_TYPE_PL, JOB_TYPE_LIB, 0, NULL);
 		free(lib_filename);
 		lib_filename = name;
 		break;
@@ -179,7 +176,7 @@ static void do_save(for_each_ti_cb for_each_ti, const char *arg, char **filename
 void view_save(int view, char *arg, int to_stdout, int filtered, int extended)
 {
 	char **dest;
-	save_ti_cb     save_ti         = extended ? cmus_save_ext         : cmus_save;
+	save_ti_cb save_ti = extended ? gm_save_ext : gm_save;
 	for_each_ti_cb lib_for_each_ti = filtered ? lib_for_each_filtered : lib_for_each;
 
 	if (arg) {
@@ -617,7 +614,7 @@ static void cmd_unmark(char *arg)
 static void cmd_update_cache(char *arg)
 {
 	int flag = parse_flags((const char **)&arg, "f");
-	cmus_update_cache(flag == 'f');
+	gm_update_cache(flag == 'f');
 }
 
 static void cmd_cd(char *arg)
@@ -733,11 +730,11 @@ static void cmd_quit(char *arg)
 	enum ui_query_answer answer;
 	if (!worker_has_job_by_type(JOB_TYPE_ANY)) {
 		if (flag != 'i' || yes_no_query("Quit cmus? [y/N]") != UI_QUERY_ANSWER_NO)
-			cmus_running = 0;
+			gRunning = 0;
 	} else {
 		answer = yes_no_query("Tracks are being added. Quit and truncate playlist(s)? [y/N]");
 		if (answer != UI_QUERY_ANSWER_NO)
-			cmus_running = 0;
+			gRunning = 0;
 	}
 }
 
@@ -1063,7 +1060,7 @@ static void cmd_run(char *arg)
 				free(argv);
 
 				/* remove non-existed files, update tags for changed files */
-				cmus_update_tis(sel.tis, sel.tis_nr, 0);
+				gm_update_tis(sel.tis, sel.tis_nr, 0);
 
 				/* we don't own sel.tis anymore! */
 				return;
@@ -1349,7 +1346,7 @@ static void cmd_push(char *arg)
 
 static void cmd_p_next(char *arg)
 {
-	cmus_next();
+	gm_next();
 }
 
 static void cmd_p_pause(char *arg)
@@ -1366,7 +1363,7 @@ static void cmd_p_play(char *arg)
 {
 	if (arg) {
 		char *tmp = expand_filename(arg);
-		cmus_play_file(tmp);
+		gm_play_file(tmp);
 		free(tmp);
 	} else {
 		player_play();
@@ -1376,7 +1373,7 @@ static void cmd_p_play(char *arg)
 static void cmd_p_prev(char *arg)
 {
 	if (rewind_offset < 0 || player_info.pos < rewind_offset) {
-		cmus_prev();
+		gm_prev();
 	} else {
 		player_play();
 	}
@@ -1384,12 +1381,12 @@ static void cmd_p_prev(char *arg)
 
 static void cmd_p_next_album(char *arg)
 {
-	cmus_next_album();
+	gm_next_album();
 }
 
 static void cmd_p_prev_album(char *arg)
 {
-	cmus_prev_album();
+	gm_prev_album();
 }
 
 static void cmd_p_stop(char *arg)
@@ -1407,7 +1404,7 @@ static void cmd_pwd(char *arg)
 
 static void cmd_raise_vte(char *arg)
 {
-	cmus_raise_vte();
+	gm_raise_vte();
 }
 
 static void cmd_rand(char *arg)
@@ -1489,12 +1486,12 @@ static void add_from_browser(add_ti_cb add, int job_type, int advance)
 	char *sel = get_browser_add_file();
 
 	if (sel) {
-		enum file_type ft;
+		FileType ft;
 		char *ret;
 
-		ft = cmus_detect_ft(sel, &ret);
+		ft = gm_detect_ft(sel, &ret);
 		if (ft != FILE_TYPE_INVALID) {
-			cmus_add(add, ret, ft, job_type, 0, NULL);
+			gm_add(add, ret, ft, job_type, 0, NULL);
 			if (advance)
 				window_down(browser_win, 1);
 		}
@@ -1819,7 +1816,7 @@ static void cmd_win_update_cache(char *arg)
 	if (sel.tis_nr == 0)
 		return;
 	sel.tis[sel.tis_nr] = NULL;
-	cmus_update_tis(sel.tis, sel.tis_nr, flag == 'f');
+	gm_update_tis(sel.tis, sel.tis_nr, flag == 'f');
 }
 
 static void cmd_win_top(char *arg)
@@ -1847,7 +1844,7 @@ static void cmd_win_update(char *arg)
 	switch (cur_view) {
 	case TREE_VIEW:
 	case SORTED_VIEW:
-		cmus_update_lib();
+		gm_update_lib();
 		break;
 	case PLAYLIST_VIEW:
 		pl_win_update();
@@ -2087,17 +2084,17 @@ static int filter_any(const char *name, const struct stat *s)
 
 static int filter_playable(const char *name, const struct stat *s)
 {
-	return S_ISDIR(s->st_mode) || cmus_is_playable(name);
+	return S_ISDIR(s->st_mode) || gm_is_playable(name);
 }
 
 static int filter_playlist(const char *name, const struct stat *s)
 {
-	return S_ISDIR(s->st_mode) || cmus_is_playlist(name);
+	return S_ISDIR(s->st_mode) || gm_is_playlist(name);
 }
 
 static int filter_supported(const char *name, const struct stat *s)
 {
-	return S_ISDIR(s->st_mode) || cmus_is_supported(name);
+	return S_ISDIR(s->st_mode) || gm_is_supported(name);
 }
 
 static void expand_files(const char *str)
@@ -2771,8 +2768,9 @@ static void expand_command_line(const char *str)
 	}
 
 	as = ce;
-	while (*as == ' ')
-		as++;
+	while (*as == ' ') {
+        as++;
+    }
 
 	/* expand argument */
 	cmd->expand(as);
@@ -2981,27 +2979,30 @@ void command_mode_ch(uchar ch)
 		break;
 	case 0x03: // ^C
 	case 0x07: // ^G
-	case 0x1B: // ESC
-		if (cmdline.blen) {
-			history_add_line(&cmd_history, cmdline.line);
-			cmdline_clear();
-		}
-		input_mode = NORMAL_MODE;
-		break;
+	case 0x1B: {
+        // ESC
+        if (cmdline.blen) {
+            history_add_line (&cmd_history, cmdline.line);
+            cmdline_clear ();
+        }
+        input_mode = NORMAL_MODE;
+        break;
+    }
 	case 0x10: // ^P
 		command_mode_key(KEY_UP);
 		return;
 	case 0xE: // ^N
 		command_mode_key(KEY_DOWN);
 		return;
-	case 0x0A:
-		if (cmdline.blen) {
-			run_command(cmdline.line);
-			history_add_line(&cmd_history, cmdline.line);
-			cmdline_clear();
-		}
-		input_mode = NORMAL_MODE;
-		break;
+	case 0x0A: {
+        if (cmdline.blen) {
+            run_command (cmdline.line);
+            history_add_line (&cmd_history, cmdline.line);
+            cmdline_clear ();
+        }
+        input_mode = NORMAL_MODE;
+        break;
+    }
 	case 0x0B:
 		cmdline_clear_end();
 		cmdline_modified();
@@ -3078,29 +3079,29 @@ void command_mode_key(int key)
 	case KEY_END:
 		cmdline_move_end();
 		return;
-	case KEY_UP:
-		{
-			const char *s;
+	case KEY_UP: {
+        const char *s;
 
-			if (history_search_text == NULL)
-				history_search_text = xstrdup(cmdline.line);
-			s = history_search_forward(&cmd_history, history_search_text);
-			if (s)
-				cmdline_set_text(s);
-		}
-		return;
-	case KEY_DOWN:
-		if (history_search_text) {
-			const char *s;
+        if (history_search_text == NULL)
+            history_search_text = xstrdup(cmdline.line);
+        s = history_search_forward(&cmd_history, history_search_text);
+        if (s)
+            cmdline_set_text(s);
+        return;
+    }
+	case KEY_DOWN: {
+        if (history_search_text) {
+            const char *s;
 
-			s = history_search_backward(&cmd_history, history_search_text);
-			if (s) {
-				cmdline_set_text(s);
-			} else {
-				cmdline_set_text(history_search_text);
-			}
-		}
-		return;
+            s = history_search_backward (&cmd_history, history_search_text);
+            if (s) {
+                cmdline_set_text (s);
+            } else {
+                cmdline_set_text (history_search_text);
+            }
+        }
+        return;
+    }
 	case KEY_BTAB:
 		tab_expand(-1);
 		break;

@@ -70,7 +70,7 @@ static int do_search(struct searchable *s, struct iter *iter, const char *text,
 	int r;
 
 	/* search text is always in locale encoding (because cmdline is) */
-	if (!using_utf8 && utf8_encode(text, gCharset, &u_text) == 0)
+	if (!gUsingUtf8 && utf8_encode(text, gCharset, &u_text) == 0)
 		text = u_text;
 
 	r = do_u_search(s, iter, text, dir, skip_current);

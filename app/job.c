@@ -67,15 +67,15 @@ int job_fd;
 static int job_fd_priv;
 
 static LIST_HEAD(job_result_head);
-static pthread_mutex_t job_mutex = CMUS_MUTEX_INITIALIZER;
+static pthread_mutex_t job_mutex = GM_MUTEX_INITIALIZER;
 
 #define TI_CAP 32
 static struct track_info **ti_buffer;
 static size_t ti_buffer_fill;
 static struct add_data *jd;
 
-#define job_lock() cmus_mutex_lock(&job_mutex)
-#define job_unlock() cmus_mutex_unlock(&job_mutex)
+#define job_lock() gm_mutex_lock(&job_mutex)
+#define job_unlock() gm_mutex_unlock(&job_mutex)
 
 void job_init(void)
 {
@@ -355,7 +355,7 @@ static void add_pl(const char *filename)
 		/* beautiful hack */
 		reverse = jd->add == play_queue_prepend;
 
-		cmus_playlist_for_each(buf, size, reverse, handle_line, cwd);
+		gm_playlist_for_each(buf, size, reverse, handle_line, cwd);
 		free(cwd);
 		munmap(buf, size);
 	}
@@ -480,7 +480,7 @@ static void job_handle_update_result(struct job_result *res)
 			if (res->update_kind[i] & UPDATE_MTIME_CHANGED)
 				d_print("mtime changed: %s\n", ti->filename);
 			force = ti->duration == 0;
-			cmus_add(lib_add_track, ti->filename, FILE_TYPE_FILE,
+			gm_add(lib_add_track, ti->filename, FILE_TYPE_FILE,
 					JOB_TYPE_LIB, force, NULL);
 		}
 

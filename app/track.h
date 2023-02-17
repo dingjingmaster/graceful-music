@@ -5,7 +5,7 @@
 #include "rbtree.h"
 #include "iter.h"
 #include "track_info.h"
-#include "cmus.h"
+#include "graceful-music.h"
 
 struct shuffle_info {
 	struct rb_node tree_node;

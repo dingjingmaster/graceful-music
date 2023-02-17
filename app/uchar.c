@@ -168,7 +168,7 @@ int u_char_width(uchar u)
 	if (unlikely(u < 0x20))
 		goto control;
 
-	if (unlikely(!using_utf8))
+	if (unlikely(!gUsingUtf8))
 		return 1;
 
 	/* invalid bytes in unicode stream are rendered "<xx>" */
@@ -649,7 +649,7 @@ char *u_strcasestr_base(const char *haystack, const char *needle)
 char *u_strcasestr_filename(const char *haystack, const char *needle)
 {
 	char *r = NULL, *ustr = NULL;
-	if (!using_utf8 && utf8_encode(haystack, gCharset, &ustr) == 0)
+	if (!gUsingUtf8 && utf8_encode(haystack, gCharset, &ustr) == 0)
 		haystack = ustr;
 	r = u_strcasestr_base(haystack, needle);
 	free(ustr);

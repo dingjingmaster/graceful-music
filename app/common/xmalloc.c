@@ -9,7 +9,7 @@ extern char *program_name;
 
 void malloc_fail(void)
 {
-	fprintf(stderr, "%s: could not allocate memory: %s\n", program_name, strerror(errno));
+	fprintf(stderr, "%s: could not allocate memory: %s\n", PACKAGE_NAME, strerror(errno));
 	exit(42);
 }
 

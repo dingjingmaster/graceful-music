@@ -1,14 +1,14 @@
 #include <systemd/sd-bus.h>
 
 #include "mpris.h"
-#include "ui_curses.h"
-#include "cmus.h"
-#include "player.h"
-#include "options.h"
-#include "output.h"
-#include "track_info.h"
 #include "utils.h"
 #include "uchar.h"
+#include "player.h"
+#include "output.h"
+#include "options.h"
+#include "ui_curses.h"
+#include "track_info.h"
+#include "graceful-music.h"
 
 #define CK(v) \
 do { \
@@ -55,7 +55,7 @@ static int mpris_write_ignore(sd_bus *_bus, const char *_path,
 static int mpris_raise_vte(sd_bus_message *m, void *_userdata,
 		sd_bus_error *_ret_error)
 {
-	cmus_raise_vte();
+	gm_raise_vte();
 	return sd_bus_reply_method_return(m, "");
 }
 
@@ -64,7 +64,7 @@ static int mpris_can_raise_vte(sd_bus *_bus, const char *_path,
 		sd_bus_message *reply, void *_userdata,
 		sd_bus_error *_ret_error)
 {
-	uint32_t b = cmus_can_raise_vte();
+	uint32_t b = gm_can_raise_vte();
 	return sd_bus_message_append_basic(reply, 'b', &b);
 }
 
@@ -98,14 +98,14 @@ static int mpris_mime_types(sd_bus *_bus, const char *_path,
 static int mpris_next(sd_bus_message *m, void *_userdata,
 		sd_bus_error *_ret_error)
 {
-	cmus_next();
+	gm_next();
 	return sd_bus_reply_method_return(m, "");
 }
 
 static int mpris_prev(sd_bus_message *m, void *_userdata,
 		sd_bus_error *_ret_error)
 {
-	cmus_prev();
+	gm_prev();
 	return sd_bus_reply_method_return(m, "");
 }
 
@@ -170,7 +170,7 @@ static int mpris_play_file(sd_bus_message *m, void *_userdata,
 {
 	const char *path = NULL;
 	CK(sd_bus_message_read_basic(m, 's', &path));
-	cmus_play_file(path);
+	gm_play_file(path);
 	return sd_bus_reply_method_return(m, "");
 }
 

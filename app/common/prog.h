@@ -4,8 +4,6 @@
 #include "compiler.h"
 
 /* set in beginning of main */
-extern char *program_name;
-
 struct option {
 	/* short option or 0 */
 	int short_opt;

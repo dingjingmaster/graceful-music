@@ -8,7 +8,6 @@
 #include "pcm.h"
 #include "http.h"
 #include "file.h"
-#include "cmus.h"
 #include "path.h"
 #include "list.h"
 #include "misc.h"
@@ -21,6 +20,7 @@
 #include "xstrjoin.h"
 #include "ui_curses.h"
 #include "mergesort.h"
+#include "graceful-music.h"
 
 #include <dlfcn.h>
 #include <errno.h>
@@ -64,11 +64,11 @@ static const char* pluginDir;
 //gInputPlugins;
 
 /* protects ip->priority and ip_head */
-static pthread_rwlock_t ip_lock = CMUS_RWLOCK_INITIALIZER;
+static pthread_rwlock_t ip_lock = GM_RWLOCK_INITIALIZER;
 
-#define ip_rdlock() cmus_rwlock_rdlock(&ip_lock)
-#define ip_wrlock() cmus_rwlock_wrlock(&ip_lock)
-#define ip_unlock() cmus_rwlock_unlock(&ip_lock)
+#define ip_rdlock() gm_rwlock_rdlock(&ip_lock)
+#define ip_wrlock() gm_rwlock_wrlock(&ip_lock)
+#define ip_unlock() gm_rwlock_unlock(&ip_lock)
 
 /* timeouts (ms) */
 static int http_connection_timeout = 5e3;
@@ -328,7 +328,7 @@ static int read_playlist(InputPlugin* ip, int sock)
         return -INPUT_ERROR_ERRNO;
     }
 
-    cmus_playlist_for_each(body, size, 0, handle_line, &rpd);
+    gm_playlist_for_each(body, size, 0, handle_line, &rpd);
     free(body);
     if (!rpd.count) {
         DEBUG ("empty playlist");

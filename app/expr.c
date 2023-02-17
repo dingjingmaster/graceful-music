@@ -7,7 +7,7 @@
 #include "utils.h"
 #include "debug.h"
 #include "list.h"
-#include "ui_curses.h" /* using_utf8, charset */
+#include "ui_curses.h" /* gUsingUtf8, charset */
 #include "convert.h"
 
 #include <stdio.h>
@@ -733,7 +733,7 @@ struct expr *expr_parse_i(const char *str, const char *err_msg, int check_short)
 			goto out;
 		}
 	}
-	if (!using_utf8 && utf8_encode(str, gCharset, &u_str) == 0) {
+	if (!gUsingUtf8 && utf8_encode(str, gCharset, &u_str) == 0) {
 		str = u_str;
 	}
 	if (!u_is_valid(str)) {
@@ -877,7 +877,7 @@ static const char *str_val(const char *key, struct track_info *ti, char **need_f
 	*need_free = NULL;
 	if (strcmp(key, "filename") == 0) {
 		val = ti->filename;
-		if (!using_utf8 && utf8_encode(val, gCharset, need_free) == 0) {
+		if (!gUsingUtf8 && utf8_encode(val, gCharset, need_free) == 0) {
 			val = *need_free;
 		}
 	} else if (strcmp(key, "codec") == 0) {

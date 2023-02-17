@@ -1,7 +1,7 @@
 #ifndef CMUS_JOB_H
 #define CMUS_JOB_H
 
-#include "cmus.h"
+#include "graceful-music.h"
 
 #define JOB_TYPE_LIB   1 << 0
 #define JOB_TYPE_PL    1 << 1
@@ -12,8 +12,9 @@
 #define JOB_TYPE_UPDATE_CACHE 1 << 18
 #define JOB_TYPE_DELETE       1 << 19
 
-struct add_data {
-	enum file_type type;
+struct add_data
+{
+	FileType type;
 	char *name;
 	add_ti_cb add;
 	void *opaque;

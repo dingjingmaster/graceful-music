@@ -1,12 +1,12 @@
 #ifndef CMUS_EDITABLE_H
 #define CMUS_EDITABLE_H
 
-#include "window.h"
 #include "list.h"
-#include "rbtree.h"
 #include "track.h"
+#include "rbtree.h"
+#include "window.h"
 #include "locking.h"
-#include "cmus.h"
+#include "graceful-music.h"
 
 struct editable;
 

@@ -202,10 +202,10 @@ static void pl_add_cb(struct track_info *ti, void *opaque)
 int pl_add_file_to_marked_pl(const char *file)
 {
 	char *full = NULL;
-	enum file_type type = cmus_detect_ft(file, &full);
+	FileType  type = gm_detect_ft(file, &full);
 	int not_invalid = type != FILE_TYPE_INVALID;
 	if (not_invalid)
-		cmus_add(pl_add_cb, full, type, JOB_TYPE_PL, 0, pl_marked);
+		gm_add(pl_add_cb, full, type, JOB_TYPE_PL, 0, pl_marked);
 	free(full);
 	return not_invalid;
 }
@@ -232,7 +232,7 @@ static void pl_load_one(const char *file)
 	char *full = pl_name_to_pl_file(file);
 
 	struct playlist *pl = pl_new(file);
-	cmus_add(pl_add_cb, full, FILE_TYPE_PL, JOB_TYPE_PL, 0, pl);
+	gm_add(pl_add_cb, full, FILE_TYPE_PL, JOB_TYPE_PL, 0, pl);
 	list_add_tail(&pl->node, &pl_head);
 
 	free(full);
@@ -391,7 +391,7 @@ static int pl_save_cb(track_info_cb cb, void *data, void *opaque)
 static void pl_save_one(struct playlist *pl)
 {
 	char *path = pl_name_to_pl_file(pl->name);
-	cmus_save(pl_save_cb, path, pl);
+	gm_save(pl_save_cb, path, pl);
 	free(path);
 }
 
@@ -585,7 +585,7 @@ void pl_import(const char *path)
 		info_msg("adding \"%s\" as \"%s\"", file, name);
 
 	struct playlist *pl = pl_new(name);
-	cmus_add(pl_add_cb, path, FILE_TYPE_PL, JOB_TYPE_PL, 0, pl);
+	gm_add(pl_add_cb, path, FILE_TYPE_PL, JOB_TYPE_PL, 0, pl);
 	list_add_tail(&pl->node, &pl_head);
 	pl_list_win->changed = 1;
 
@@ -596,7 +596,7 @@ void pl_export_selected_pl(const char *path)
 {
 	char *tmp = expand_filename(path);
 	if (access(tmp, F_OK) != 0 || yes_no_query("File exists. Overwrite? [y/N]") == UI_QUERY_ANSWER_YES)
-		cmus_save(pl_save_cb, tmp, pl_visible);
+		gm_save(pl_save_cb, tmp, pl_visible);
 	free(tmp);
 }
 
@@ -829,7 +829,7 @@ void pl_win_update(void)
 	pl_clear_visible_pl();
 
 	char *full = pl_name_to_pl_file(pl_visible->name);
-	cmus_add(pl_add_cb, full, FILE_TYPE_PL, JOB_TYPE_PL, 0, pl_visible);
+	gm_add(pl_add_cb, full, FILE_TYPE_PL, JOB_TYPE_PL, 0, pl_visible);
 	free(full);
 }
 

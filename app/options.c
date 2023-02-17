@@ -5,7 +5,6 @@
 #include "player.h"
 #include "buffer.h"
 #include "ui_curses.h"
-#include "cmus.h"
 #include "misc.h"
 #include "lib.h"
 #include "pl.h"
@@ -24,6 +23,7 @@
 #include "discid.h"
 #include "mpris.h"
 #include "global.h"
+#include "graceful-music.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -1644,7 +1644,7 @@ void options_load(void)
 	}
 
 	/* replace the default format_clipped_text symbol in ascii terminal */
-	if (!using_utf8 && strcmp(clipped_text_format, str_defaults[FMT_CLIPPED_TEXT].value) == 0) {
+	if (!gUsingUtf8 && strcmp(clipped_text_format, str_defaults[FMT_CLIPPED_TEXT].value) == 0) {
 		clipped_text_internal = xstrdup("...");
 	}
 }

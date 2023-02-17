@@ -9,8 +9,8 @@
 #include "compiler.h"
 #include "options.h"
 #include "mpris.h"
-#include "cmus.h"
 #include "lib.h"
+#include "graceful-music.h"
 #include "plugins/output-interface.h"
 
 #include <stdio.h>
@@ -40,7 +40,7 @@ enum consumer_status {
 };
 
 /* protects player_info_priv and player_metadata */
-static pthread_mutex_t player_info_mutex = CMUS_MUTEX_INITIALIZER;
+static pthread_mutex_t player_info_mutex = GM_MUTEX_INITIALIZER;
 struct player_info player_info;
 char player_metadata[255 * 16 + 1];
 static struct player_info player_info_priv = {
@@ -79,15 +79,15 @@ static sample_format_t buffer_sf;
 static CHANNEL_MAP(buffer_channel_map);
 
 static pthread_t gProducerThread;
-static pthread_mutex_t producer_mutex = CMUS_MUTEX_INITIALIZER;
-static pthread_cond_t gProducerPlaying = CMUS_COND_INITIALIZER;
+static pthread_mutex_t producer_mutex = GM_MUTEX_INITIALIZER;
+static pthread_cond_t gProducerPlaying = GM_COND_INITIALIZER;
 static int gProducerRunning = 1;
 static enum producer_status producer_status = PS_UNLOADED;
 static struct input_plugin *ip = NULL;
 
 static pthread_t consumerThread;
-static pthread_mutex_t consumer_mutex = CMUS_MUTEX_INITIALIZER;
-static pthread_cond_t gConsumerPlaying = CMUS_COND_INITIALIZER;
+static pthread_mutex_t consumer_mutex = GM_MUTEX_INITIALIZER;
+static pthread_cond_t gConsumerPlaying = GM_COND_INITIALIZER;
 static int gConsumerRunning = 1;
 static enum consumer_status consumer_status = CS_STOPPED;
 static unsigned long consumer_pos = 0;
@@ -100,14 +100,14 @@ static double replaygain_scale = 1.0;
 
 /* locking {{{ */
 
-#define player_info_priv_lock() cmus_mutex_lock(&player_info_mutex)
-#define player_info_priv_unlock() cmus_mutex_unlock(&player_info_mutex)
+#define player_info_priv_lock() gm_mutex_lock(&player_info_mutex)
+#define player_info_priv_unlock() gm_mutex_unlock(&player_info_mutex)
 
-#define producer_lock() cmus_mutex_lock(&producer_mutex)
-#define producer_unlock() cmus_mutex_unlock(&producer_mutex)
+#define producer_lock() gm_mutex_lock(&producer_mutex)
+#define producer_unlock() gm_mutex_unlock(&producer_mutex)
 
-#define consumer_lock() cmus_mutex_lock(&consumer_mutex)
-#define consumer_unlock() cmus_mutex_unlock(&consumer_mutex)
+#define consumer_lock() gm_mutex_lock(&consumer_mutex)
+#define consumer_unlock() gm_mutex_unlock(&consumer_mutex)
 
 #define player_lock() \
 	do { \
@@ -339,7 +339,7 @@ static void update_rg_scale(void)
 	if (!player_info_priv.ti || !replaygain)
 		return;
 
-	bool avoid_album_gain = replaygain == RG_SMART && (!play_library || shuffle == SHUFFLE_TRACKS || cmus_queue_active());
+	bool avoid_album_gain = replaygain == RG_SMART && (!play_library || shuffle == SHUFFLE_TRACKS || gm_queue_active());
 	
 	if (replaygain == RG_TRACK || replaygain == RG_TRACK_PREFERRED || avoid_album_gain) {
 		gain = player_info_priv.ti->rg_track_gain;
@@ -628,7 +628,7 @@ static void _producer_play(void)
 	if (producer_status == PS_UNLOADED) {
 		struct track_info *ti;
 
-		if ((ti = cmus_get_next_track())) {
+		if ((ti = gm_get_next_track())) {
 			int rc;
 
 			ip = ip_new(ti->filename);
@@ -817,7 +817,7 @@ static void _consumer_handle_eof(void)
 		return;
 	}
 
-	if ((ti = cmus_get_next_track())) {
+	if ((ti = gm_get_next_track())) {
 		_producer_unload();
 		ip = ip_new(ti->filename);
 		_producer_status_update(PS_STOPPED);
@@ -1240,7 +1240,7 @@ void player_seek(double offset, int relative, int start_playing)
 				/* seeking forward */
 				if (new_pos > duration) {
 					player_unlock();
-					cmus_next();
+					gm_next();
 					return;
 				}
 				if (new_pos < 0.0)
@@ -1468,10 +1468,10 @@ void player_info_snapshot(void)
 
 void player_metadata_lock(void)
 {
-	cmus_mutex_lock(&player_info_mutex);
+	gm_mutex_lock(&player_info_mutex);
 }
 
 void player_metadata_unlock(void)
 {
-	cmus_mutex_unlock(&player_info_mutex);
+	gm_mutex_unlock(&player_info_mutex);
 }

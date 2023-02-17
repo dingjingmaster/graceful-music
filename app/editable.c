@@ -1,12 +1,12 @@
 #include "editable.h"
 #include "search.h"
 #include "track.h"
-#include "track_info.h"
 #include "expr.h"
+#include "xmalloc.h"
 #include "filters.h"
 #include "locking.h"
 #include "mergesort.h"
-#include "xmalloc.h"
+#include "track_info.h"
 
 static const struct searchable_ops simple_search_ops = {
 	.get_prev = simple_track_get_prev,

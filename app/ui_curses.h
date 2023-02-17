@@ -37,7 +37,7 @@ enum ui_query_answer {
 
 #include <signal.h>
 
-extern volatile sig_atomic_t cmus_running;
+extern volatile sig_atomic_t gRunning;
 extern int ui_initialized;
 extern enum ui_input_mode input_mode;
 extern int cur_view;
@@ -51,7 +51,7 @@ extern char *play_queue_filename;
 extern char *play_queue_ext_filename;
 
 extern char *charset;
-extern int using_utf8;
+extern bool gUsingUtf8;
 
 
 int curses_main(int argc, char *argv[]);
