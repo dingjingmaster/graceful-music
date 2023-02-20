@@ -1608,42 +1608,44 @@ int source_file(const char *filename)
 
 void options_load(void)
 {
-	char filename[512];
-	int i;
+    int i;
+    char filename[512];
 
-	/* initialize those that can't be statically initialized */
-	cdda_device = get_default_cdda_device();
-	for (i = 0; gStrDefaults[i].name; i++)
-		option_set(gStrDefaults[i].name, gStrDefaults[i].value);
+    /* initialize those that can't be statically initialized */
+    cdda_device = get_default_cdda_device();
+    for (i = 0; gStrDefaults[i].name; i++) {
+        option_set (gStrDefaults[i].name, gStrDefaults[i].value);
+    }
 
-	/* load autosave config */
-	snprintf(filename, sizeof(filename), "%s/autosave", gConfigDir);
+    /* load autosave config */
+    snprintf(filename, sizeof(filename), "%s/autosave", gConfigDir);
 
-	if (source_file(filename) == -1) {
-		char *def = xstrjoin(dataDir, "/rc");
+    if (source_file(filename) == -1) {
+        char* def = g_strdup_printf ("%s/rc", dataDir);
+        if (errno != ENOENT) {
+            ERROR ("loading %s: %s", filename, strerror(errno));
+        }
 
-		if (errno != ENOENT)
-			error_msg("loading %s: %s", filename, strerror(errno));
+        /* load defaults */
+        if (source_file(def) == -1) {
+            DIE ("loading %s", def);
+        }
+        free(def);
+    }
 
-		/* load defaults */
-		if (source_file(def) == -1)
-			die_errno("loading %s", def);
+    /* load optional static config */
+    snprintf(filename, sizeof(filename), "%s/rc", gConfigDir);
 
-		free(def);
-	}
+    if (source_file(filename) == -1) {
+        if (errno != ENOENT) {
+            error_msg("loading %s: %s", filename, strerror(errno));
+        }
+    }
 
-	/* load optional static config */
-	snprintf(filename, sizeof(filename), "%s/rc", gConfigDir);
-
-	if (source_file(filename) == -1) {
-		if (errno != ENOENT)
-			error_msg("loading %s: %s", filename, strerror(errno));
-	}
-
-	/* replace the default format_clipped_text symbol in ascii terminal */
-	if (!gUsingUtf8 && strcmp(clipped_text_format, gStrDefaults[FMT_CLIPPED_TEXT].value) == 0) {
-		clipped_text_internal = xstrdup("...");
-	}
+    /* replace the default format_clipped_text symbol in ascii terminal */
+    if (!gUsingUtf8 && strcmp(clipped_text_format, gStrDefaults[FMT_CLIPPED_TEXT].value) == 0) {
+        clipped_text_internal = g_strdup("...");
+    }
 }
 
 void options_exit (void)

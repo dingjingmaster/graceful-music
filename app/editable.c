@@ -8,11 +8,11 @@
 #include "mergesort.h"
 #include "track_info.h"
 
-static const struct searchable_ops simple_search_ops = {
-	.get_prev = simple_track_get_prev,
-	.get_next = simple_track_get_next,
-	.get_current = simple_track_search_get_current,
-	.matches = simple_track_search_matches
+static const SearchableOptions simple_search_ops = {
+	.GetPrev = simple_track_get_prev,
+	.GetNext = simple_track_get_next,
+	.GetCurrent = simple_track_search_get_current,
+	.Matches = simple_track_search_matches
 };
 
 static struct simple_track *get_selected(struct editable *e)

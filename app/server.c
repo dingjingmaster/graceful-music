@@ -258,7 +258,7 @@ static void read_commands(struct client *client)
 			if (*line == '/') {
 				int restricted = 0;
 				line++;
-				search_direction = SEARCH_FORWARD;
+				gSearchDirection = SEARCH_FORWARD;
 				if (*line == '/') {
 					line++;
 					restricted = 1;
@@ -268,7 +268,7 @@ static void read_commands(struct client *client)
 			} else if (*line == '?') {
 				int restricted = 0;
 				line++;
-				search_direction = SEARCH_BACKWARD;
+				gSearchDirection = SEARCH_BACKWARD;
 				if (*line == '?') {
 					line++;
 					restricted = 1;

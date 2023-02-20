@@ -1,5 +1,9 @@
-#ifndef CMUS_SF_H
-#define CMUS_SF_H
+//
+// Created by dingjing on 23-2-20.
+//
+
+#ifndef GRACEFUL_MUSIC_SF_H
+#define GRACEFUL_MUSIC_SF_H
 
 /*
  *  0     1 big_endian 0-1
@@ -9,8 +13,6 @@
  *  6-23 18 rate       0-262143
  * 24-31  8 channels   0-255
  */
-typedef unsigned int sample_format_t;
-
 #define SF_BIGENDIAN_MASK	0x00000001
 #define SF_SIGNED_MASK		0x00000002
 #define SF_BITS_MASK		0x00000038
@@ -44,4 +46,4 @@ typedef unsigned int sample_format_t;
 #define sf_get_frame_size(sf)	(sf_get_sample_size((sf)) * sf_get_channels((sf)))
 #define sf_get_second_size(sf)	(sf_get_rate((sf)) * sf_get_frame_size((sf)))
 
-#endif
+#endif //GRACEFUL_MUSIC_SF_H

@@ -1,6 +1,9 @@
-#ifndef CMUS_COMPILER_H
-#define CMUS_COMPILER_H
+//
+// Created by dingjing on 23-2-20.
+//
 
+#ifndef GRACEFUL_MUSIC_COMPILER_H
+#define GRACEFUL_MUSIC_COMPILER_H
 #include <stddef.h>
 
 /*
@@ -69,4 +72,4 @@
 #define container_of(ptr, type, member) container_of_portable(ptr, type, member)
 #endif
 
-#endif
+#endif //GRACEFUL_MUSIC_COMPILER_H

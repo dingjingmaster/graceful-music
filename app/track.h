@@ -7,6 +7,8 @@
 #include "track_info.h"
 #include "graceful-music.h"
 
+#include <glib.h>
+
 struct shuffle_info {
 	struct rb_node tree_node;
 	struct album *album;
@@ -37,9 +39,9 @@ static inline struct simple_track *to_simple_track(const struct list_head *item)
 	return container_of(item, struct simple_track, node);
 }
 
-static inline struct simple_track *iter_to_simple_track(const struct iter *iter)
+static inline struct simple_track *iter_to_simple_track(const GList* iter)
 {
-	return iter->data1;
+	return iter->data;
 }
 
 static inline struct simple_track *tree_node_to_simple_track(const struct rb_node *node)
@@ -62,9 +64,9 @@ int simple_track_get_prev(struct iter *);
 int simple_track_get_next(struct iter *);
 
 /* data is window */
-int simple_track_search_get_current(void *data, struct iter *iter);
-int simple_track_search_matches(void *data, struct iter *iter, const char *text);
-int _simple_track_search_matches(struct iter *iter, const char *text);
+int simple_track_search_get_current(void *data, GList* iter);
+int simple_track_search_matches(void *data, GList* iter, const char *text);
+int _simple_track_search_matches(GList* iter, const char *text);
 
 struct shuffle_info *shuffle_list_get_next(struct rb_root *root, struct shuffle_info *cur,
 		int (*filter)(const struct album *));

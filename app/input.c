@@ -601,7 +601,7 @@ int ip_open(InputPlugin* ip)
 void ip_setup(InputPlugin* ip)
 {
     unsigned int bits, is_signed, channels;
-    sample_format_t sf = ip->data.sf;
+    SampleFormat sf = ip->data.sf;
 
     bits = sf_get_bits(sf);
     is_signed = sf_get_signed(sf);
@@ -810,7 +810,7 @@ char *ip_codec_profile(InputPlugin* ip)
     return ip->codecProfile;
 }
 
-sample_format_t ip_get_sf(InputPlugin* ip)
+SampleFormat ip_get_sf(InputPlugin* ip)
 {
     BUG_ON(!ip->open);
 

@@ -1427,7 +1427,7 @@ static void cmd_rand(char *arg)
 static void cmd_search_next(char *arg)
 {
 	if (search_str) {
-		if (!search_next(searchable, search_str, search_direction))
+		if (!search_next(searchable, search_str, gSearchDirection))
 			search_not_found();
 	}
 }
@@ -1435,7 +1435,7 @@ static void cmd_search_next(char *arg)
 static void cmd_search_prev(char *arg)
 {
 	if (search_str) {
-		if (!search_next(searchable, search_str, !search_direction))
+		if (!search_next(searchable, search_str, !gSearchDirection))
 			search_not_found();
 	}
 }

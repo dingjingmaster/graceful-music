@@ -27,8 +27,18 @@ static inline void help_entry_to_iter(struct help_entry *e, struct iter *iter)
 	iter->data2 = NULL;
 }
 
-static GENERIC_ITER_PREV(help_get_prev, struct help_entry, node)
-static GENERIC_ITER_NEXT(help_get_next, struct help_entry, node)
+//static GENERIC_ITER_PREV(help_get_prev, struct help_entry, node)
+//static GENERIC_ITER_NEXT(help_get_next, struct help_entry, node)
+
+static int help_get_next (GList*)
+{
+    return 0;
+}
+
+static int help_get_prev (GList*)
+{
+    return 0;
+}
 
 static int help_search_get_current(void *data, struct iter *iter)
 {
@@ -71,11 +81,11 @@ static int help_search_matches(void *data, struct iter *iter, const char *text)
 	return matched;
 }
 
-static const struct searchable_ops help_search_ops = {
-	.get_prev = help_get_prev,
-	.get_next = help_get_next,
-	.get_current = help_search_get_current,
-	.matches = help_search_matches
+static const SearchableOptions help_search_ops = {
+	.GetPrev = help_get_prev,
+	.GetNext = help_get_next,
+	.GetCurrent = help_search_get_current,
+	.Matches = help_search_matches
 };
 
 static void help_add_text(const char *s)

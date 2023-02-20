@@ -14,7 +14,7 @@
 #include <ctype.h>
 
 /* this is set in ui_curses.c */
-enum search_direction search_direction = SEARCH_FORWARD;
+SearchDirection gSearchDirection = SEARCH_FORWARD;
 
 /* current search string, this is set _only_ when user presses enter
  * this string is used when 'n' or 'N' is pressed
@@ -30,7 +30,7 @@ static char *history_search_text = NULL;
 static void update_search_line(const char *text, int restricted)
 {
 	int len = strlen(text);
-	char ch = search_direction == SEARCH_FORWARD ? '/' : '?';
+	char ch = gSearchDirection == SEARCH_FORWARD ? '/' : '?';
 	char *buf, *ptr;
 
 	buf = xnew(char, len + 2);
@@ -50,13 +50,13 @@ static int search_line_empty(void)
 		return 1;
 	if (cmdline.clen > 1)
 		return 0;
-	ch = search_direction == SEARCH_FORWARD ? '/' : '?';
+	ch = gSearchDirection == SEARCH_FORWARD ? '/' : '?';
 	return cmdline.line[0] == ch;
 }
 
 static void parse_line(const char **text, int *restricted)
 {
-	char ch = search_direction == SEARCH_FORWARD ? '/' : '?';
+	char ch = gSearchDirection == SEARCH_FORWARD ? '/' : '?';
 	int r = 0;
 
 	if (cmdline.line[0] == ch) {
@@ -92,7 +92,7 @@ static void delete(void)
 	cmdline_delete_ch();
 	parse_line(&text, &search_restricted);
 	if (text[0])
-		search(searchable, text, search_direction, 0);
+		search(searchable, text, gSearchDirection, 0);
 
 	/* restore old value */
 	search_restricted = restricted;
@@ -105,7 +105,7 @@ void search_text(const char *text, int restricted, int beginning)
 		if (search_str) {
 			/* use old search string */
 			search_restricted = restricted;
-			if (!search_next(searchable, search_str, search_direction))
+			if (!search_next(searchable, search_str, gSearchDirection))
 				search_not_found();
 		}
 	} else {
@@ -116,7 +116,7 @@ void search_text(const char *text, int restricted, int beginning)
 
 		/* search not yet done if up or down arrow was pressed */
 		search_restricted = restricted;
-		if (!search(searchable, search_str, search_direction, beginning))
+		if (!search(searchable, search_str, gSearchDirection, beginning))
 			search_not_found();
 	}
 }
@@ -193,7 +193,7 @@ void search_mode_ch(uchar ch)
 
 			cmdline_insert_ch(ch);
 			parse_line(&text, &search_restricted);
-			search(searchable, text, search_direction, beginning);
+			search(searchable, text, gSearchDirection, beginning);
 
 			/* restore old value */
 			search_restricted = restricted;

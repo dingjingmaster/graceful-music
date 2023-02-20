@@ -221,43 +221,56 @@ static int browser_load (const char *name)
 	return 0;
 }
 
-static GENERIC_ITER_PREV(browser_get_prev, struct browser_entry, node)
-static GENERIC_ITER_NEXT(browser_get_next, struct browser_entry, node)
+//static GENERIC_ITER_PREV(browser_get_prev, struct browser_entry, node)
+//static GENERIC_ITER_NEXT(browser_get_next, struct browser_entry, node)
 
-static int browser_search_get_current(void *data, struct iter *iter)
+
+static int browser_get_next (GList*)
 {
-	return window_get_sel(browser_win, iter);
+    return 0;
 }
 
-static int browser_search_matches(void *data, struct iter *iter, const char *text)
+static int browser_get_prev (GList*)
 {
-	char **words = get_words(text);
-	int matched = 0;
-
-	if (words[0] != NULL) {
-		struct browser_entry *e;
-		int i;
-
-		e = iter_to_browser_entry(iter);
-		for (i = 0; ; i++) {
-			if (words[i] == NULL) {
-				window_set_sel(browser_win, iter);
-				matched = 1;
-				break;
-			}
-			if (u_strcasestr_filename(e->name, words[i]) == NULL)
-				break;
-		}
-	}
-	free_str_array(words);
-	return matched;
+    return 0;
 }
 
-static const struct searchable_ops browser_search_ops = {
-	.get_prev = browser_get_prev,
-	.get_next = browser_get_next,
-	.get_current = browser_search_get_current,
-	.matches = browser_search_matches
+static int browser_search_get_current(void *data, GList* iter)
+{
+    return 0;
+//	return window_get_sel(browser_win, iter);
+}
+
+static int browser_search_matches(void *data, GList* iter, const char *text)
+{
+    return 0;
+//	char **words = get_words(text);
+//	int matched = 0;
+//
+//	if (words[0] != NULL) {
+//		struct browser_entry *e;
+//		int i;
+//
+//		e = iter_to_browser_entry(iter);
+//		for (i = 0; ; i++) {
+//			if (words[i] == NULL) {
+//				window_set_sel(browser_win, iter);
+//				matched = 1;
+//				break;
+//			}
+//			if (u_strcasestr_filename(e->name, words[i]) == NULL)
+//				break;
+//		}
+//	}
+//	free_str_array(words);
+//	return matched;
+}
+
+static const SearchableOptions browser_search_ops = {
+	.GetPrev = browser_get_prev,
+	.GetNext = browser_get_next,
+	.GetCurrent = browser_search_get_current,
+	.Matches = browser_search_matches
 };
 
 void browser_init(void)

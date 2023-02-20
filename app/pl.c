@@ -148,11 +148,11 @@ static int pl_search_matches(void *data, struct iter *iter, const char *text)
 	return matched;
 }
 
-static const struct searchable_ops pl_searchable_ops = {
-	.get_prev = pl_search_get_prev,
-	.get_next = pl_search_get_next,
-	.get_current = pl_search_get_current,
-	.matches = pl_search_matches,
+static const SearchableOptions pl_searchable_ops = {
+	.GetPrev = pl_search_get_prev,
+	.GetNext = pl_search_get_next,
+	.GetCurrent = pl_search_get_current,
+	.Matches = pl_search_matches,
 };
 
 static void pl_free_track(struct editable *e, struct list_head *item)

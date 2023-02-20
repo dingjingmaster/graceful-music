@@ -1,5 +1,7 @@
+include(${CMAKE_SOURCE_DIR}/app/ui/ui.cmake)
 include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
 include(${CMAKE_SOURCE_DIR}/app/plugins/plugins.cmake)
+include(${CMAKE_SOURCE_DIR}/app/functions/functions.cmake)
 
 FILE(GLOB GM_SRC
         ape.h                       ape.c
@@ -43,7 +45,6 @@ FILE(GLOB GM_SRC
         rbtree.h                    rbtree.c
         read_wrapper.h              read_wrapper.c
         search_mode.h               search_mode.c
-        search.h                    search.c
         server.h                    server.c
         spawn.h                     spawn.c
         tabexp_file.h               tabexp_file.c
@@ -75,6 +76,6 @@ FILE(GLOB GM_SRC
         graceful-music.h            graceful-music.c
 )
 
-add_executable(graceful-music main.c ${GM_SRC} ${COMMON_SRC} ${PLUGINS_SRC})
+add_executable(graceful-music main.c ${GM_SRC} ${COMMON_SRC} ${PLUGINS_SRC} ${GM_UI_CURSES_SRC} ${GM_FUNCTIONS_SRC})
 target_link_libraries(graceful-music ${GIO_LIBRARIES} ${FLAC_LIBRARIES} ${ALSA_LIBRARIES} ${FFMPEG_LIBRARIES} -lm -lpthread -lncursesw -ldl -lcddb -lcdio_cdda -lcdio -lmad -lmodplug -lwavpack -lfaad -lpulse -lsystemd)
 target_link_directories(graceful-music PUBLIC ${GIO_INCLUDE_DIRS} ${FLAC_INCLUDE_DIRS} ${ALSA_INCLUDE_DIRS} ${FFMPEG_INCLUDE_DIRS})

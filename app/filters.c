@@ -26,15 +26,35 @@ static inline void filter_entry_to_iter(struct filter_entry *e, struct iter *ite
 	iter->data2 = NULL;
 }
 
-static GENERIC_ITER_PREV(filters_get_prev, struct filter_entry, node)
-static GENERIC_ITER_NEXT(filters_get_next, struct filter_entry, node)
+//static GENERIC_ITER_PREV(filters_get_prev, struct filter_entry, node)
+//static GENERIC_ITER_NEXT(filters_get_next, struct filter_entry, node)
 
-static int filters_search_get_current(void *data, struct iter *iter)
+static int filters_get_prev (GList* iter)
+{
+    return 0;
+}
+
+
+static int filters_get_next (GList* iter)
+{
+    GList* head = iter;
+
+    while (head && head->prev) {
+        head = head->prev;
+    }
+
+    if (!head || !iter) {
+        return 0;
+    }
+    return 0;
+}
+
+static int filters_search_get_current(void *data, GList* iter)
 {
 	return window_get_sel(filters_win, iter);
 }
 
-static int filters_search_matches(void *data, struct iter *iter, const char *text)
+static int filters_search_matches(void *data, GList* iter, const char *text)
 {
 	char **words = get_words(text);
 	int matched = 0;
@@ -58,11 +78,11 @@ static int filters_search_matches(void *data, struct iter *iter, const char *tex
 	return matched;
 }
 
-static const struct searchable_ops filters_search_ops = {
-	.get_prev = filters_get_prev,
-	.get_next = filters_get_next,
-	.get_current = filters_search_get_current,
-	.matches = filters_search_matches
+static const SearchableOptions filters_search_ops = {
+	.GetPrev = filters_get_prev,
+	.GetNext = filters_get_next,
+	.GetCurrent = filters_search_get_current,
+	.Matches = filters_search_matches
 };
 
 static void free_filter(struct filter_entry *e)

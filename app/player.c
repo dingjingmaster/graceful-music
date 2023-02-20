@@ -75,7 +75,7 @@ int soft_vol;
 int soft_vol_l;
 int soft_vol_r;
 
-static sample_format_t buffer_sf;
+static SampleFormat buffer_sf;
 static CHANNEL_MAP(buffer_channel_map);
 
 static pthread_t gProducerThread;
@@ -215,7 +215,7 @@ static inline void scale_sample_int32_t(int32_t *buf, int i, int vol, int swap)
 	buf[i] = swap ? swap_uint32(sample) : sample;
 }
 
-static inline int sf_need_swap(sample_format_t sf)
+static inline int sf_need_swap(SampleFormat sf)
 {
 #ifdef WORDS_BIGENDIAN
 	return !sf_get_bigendian(sf);

@@ -1191,7 +1191,7 @@ static void do_update_commandline(void)
 	w = u_str_width(str);
 	ch = ':';
 	if (input_mode == SEARCH_MODE)
-		ch = search_direction == SEARCH_FORWARD ? '/' : '?';
+		ch = gSearchDirection == SEARCH_FORWARD ? '/' : '?';
 
 	if (w <= win_w - 2) {
 		addch(ch);
@@ -1641,7 +1641,7 @@ void enter_search_mode(void)
 	gbuf_clear(&error_buf);
 	error_time = 0;
 	input_mode = SEARCH_MODE;
-	search_direction = SEARCH_FORWARD;
+	gSearchDirection = SEARCH_FORWARD;
 	update_commandline();
 }
 
@@ -1650,7 +1650,7 @@ void enter_search_backward_mode(void)
 	gbuf_clear(&error_buf);
 	error_time = 0;
 	input_mode = SEARCH_MODE;
-	search_direction = SEARCH_BACKWARD;
+	gSearchDirection = SEARCH_BACKWARD;
 	update_commandline();
 }
 
@@ -2233,6 +2233,7 @@ static void init_curses(void)
 	act.sa_handler = sig_winch;
 	sigaction(SIGWINCH, &act, NULL);
 
+    //
 	initscr();
 	nodelay(stdscr, TRUE);
 	keypad(stdscr, TRUE);
@@ -2294,66 +2295,67 @@ static void init_curses(void)
 	update_window_size();
 }
 
-static void init_all(void)
+static void init_all (void)
 {
-	gMainThread = pthread_self ();
-	gm_track_request_init ();
+    gMainThread = pthread_self ();
+    gm_track_request_init ();
 
-	server_init(gSocketPath);
+    server_init(gSocketPath);
 
-	player_init();                      // 创建播放线程 和 音乐文件解析线程
-	options_add();
+    player_init();                      // 创建播放线程 和 音乐文件解析线程
+    options_add();
 
-	lib_init();
-	searchable = tree_searchable;
-	gm_init();
-	pl_init();
+    lib_init();
+    searchable = tree_searchable;
+    gm_init();
+    pl_init();
 
-	browser_init();                     // 从磁盘文件夹读取音乐文件
-	filters_init();
-	help_init();
-	cmdline_init();
-	commands_init();
-	search_mode_init();
+    browser_init();                     // 从磁盘文件夹读取音乐文件
+    filters_init();
+    help_init();                        // 帮助页面
+    cmdline_init();
+    commands_init();
+    search_mode_init();
 
-	/* almost everything must be initialized now */
-	options_load();
-	if (mpris)
-		mpris_init();
+    /* almost everything must be initialized now */
+    options_load();
+    if (mpris) {
+        mpris_init();
+    }
 
 	/* finally we can set the output plugin */
-	player_set_op(output_plugin);
-	if (!soft_vol)
-		mixer_open();
+    player_set_op(output_plugin);
+    if (!soft_vol) {
+        mixer_open();
+    }
 
-	lib_autosave_filename = xstrjoin(gConfigDir, "/lib.pl");
-	play_queue_autosave_filename = xstrjoin(gConfigDir, "/queue.pl");
+    lib_autosave_filename = xstrjoin(gConfigDir, "/lib.pl");
+    play_queue_autosave_filename = xstrjoin(gConfigDir, "/queue.pl");
 
-	lib_filename = xstrdup(lib_autosave_filename);
+    lib_filename = xstrdup(lib_autosave_filename);
 
-	if (error_count) {
-		char buf[16];
-		char *ret;
+    if (error_count) {
+        char buf[16];
+        char *ret;
 
-		warn("Press <enter> to continue.");
+        warn("Press <enter> to continue.");
 
-		ret = fgets(buf, sizeof(buf), stdin);
-		BUG_ON(ret == NULL);
-	}
-	help_add_all_unbound();
+        ret = fgets(buf, sizeof(buf), stdin);
+        BUG_ON(ret == NULL);
+    }
+//    help_add_all_unbound();
 
-	init_curses();
+    init_curses();
 
-	if (resume_cmus) {
+    if (resume_cmus) {
 		resume_load();
-		gm_add(play_queue_append, play_queue_autosave_filename,
-				FILE_TYPE_PL, JOB_TYPE_QUEUE, 0, NULL);
-	} else {
+		gm_add(play_queue_append, play_queue_autosave_filename, FILE_TYPE_PL, JOB_TYPE_QUEUE, 0, NULL);
+	}
+    else {
 		set_view(start_view);
 	}
 
-	gm_add(lib_add_track, lib_autosave_filename, FILE_TYPE_PL,
-			JOB_TYPE_LIB, 0, NULL);
+	gm_add(lib_add_track, lib_autosave_filename, FILE_TYPE_PL, JOB_TYPE_LIB, 0, NULL);
 
 	worker_start();
 }

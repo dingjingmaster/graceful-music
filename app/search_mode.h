@@ -11,7 +11,7 @@
 #endif
 
 extern char *search_str;
-extern enum search_direction search_direction;
+extern SearchDirection              gSearchDirection;
 
 /* //WORDS or ??WORDS search mode */
 extern int search_restricted;

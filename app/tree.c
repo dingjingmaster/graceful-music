@@ -97,188 +97,198 @@ static void tree_set_expand_artist(struct artist *artist, int expand)
 }
 
 /* tree (search) iterators {{{ */
-static int tree_search_get_prev(struct iter *iter)
+static int tree_search_get_prev(GList* iter)
 {
-	struct rb_root *root = iter->data0;
-	struct tree_track *track = iter->data1;
-	struct artist *artist;
-	struct album *album;
-
-	BUG_ON(iter->data2);
-	if (root == NULL)
-		return 0;
-	if (track == NULL) {
-		/* head, get last track */
-		if (rb_root_empty(root)) {
-			/* empty, iter points to the head already */
-			return 0;
-		}
-		artist = to_artist(rb_last(root));
-		album = to_album(rb_last(&artist->album_root));
-		iter->data1 = to_tree_track(rb_last(&album->track_root));
-		return 1;
-	}
-	/* prev track */
-	if (rb_prev(&track->tree_node) == NULL || search_restricted) {
-		/* prev album */
-		if (rb_prev(&track->album->tree_node) == NULL) {
-			/* prev artist */
-			if (rb_prev(&track->album->artist->tree_node) == NULL)
-				return 0;
-			artist = to_artist(rb_prev(&track->album->artist->tree_node));
-			album = to_album(rb_last(&artist->album_root));
-			track = to_tree_track(rb_last(&album->track_root));
-		} else {
-			album = to_album(rb_prev(&track->album->tree_node));
-			track = to_tree_track(rb_last(&album->track_root));
-		}
-	} else {
-		track = to_tree_track(rb_prev(&track->tree_node));
-	}
-	iter->data1 = track;
+//	struct rb_root *root = iter->data0;
+//	struct tree_track *track = iter->data1;
+//	struct artist *artist;
+//	struct album *album;
+//
+//	BUG_ON(iter->data2);
+//	if (root == NULL)
+//		return 0;
+//	if (track == NULL) {
+//		/* head, get last track */
+//		if (rb_root_empty(root)) {
+//			/* empty, iter points to the head already */
+//			return 0;
+//		}
+//		artist = to_artist(rb_last(root));
+//		album = to_album(rb_last(&artist->album_root));
+//		iter->data1 = to_tree_track(rb_last(&album->track_root));
+//		return 1;
+//	}
+//	/* prev track */
+//	if (rb_prev(&track->tree_node) == NULL || search_restricted) {
+//		/* prev album */
+//		if (rb_prev(&track->album->tree_node) == NULL) {
+//			/* prev artist */
+//			if (rb_prev(&track->album->artist->tree_node) == NULL)
+//				return 0;
+//			artist = to_artist(rb_prev(&track->album->artist->tree_node));
+//			album = to_album(rb_last(&artist->album_root));
+//			track = to_tree_track(rb_last(&album->track_root));
+//		} else {
+//			album = to_album(rb_prev(&track->album->tree_node));
+//			track = to_tree_track(rb_last(&album->track_root));
+//		}
+//	} else {
+//		track = to_tree_track(rb_prev(&track->tree_node));
+//	}
+//	iter->data1 = track;
 	return 1;
 }
 
-static int tree_search_get_next(struct iter *iter)
+static int tree_search_get_next(GList* iter)
 {
-	struct rb_root *root = iter->data0;
-	struct tree_track *track = iter->data1;
-	struct artist *artist;
-	struct album *album;
-
-	BUG_ON(iter->data2);
-	if (root == NULL)
-		return 0;
-	if (track == NULL) {
-		/* head, get first track */
-		if (rb_root_empty(root)) {
-			/* empty, iter points to the head already */
-			return 0;
-		}
-		artist = to_artist(rb_first(root));
-		album = to_album(rb_first(&artist->album_root));
-		iter->data1 = to_tree_track(rb_first(&album->track_root));
-		return 1;
-	}
-	/* next track */
-	if (rb_next(&track->tree_node) == NULL || search_restricted) {
-		/* next album */
-		if (rb_next(&track->album->tree_node) == NULL) {
-			/* next artist */
-			if (rb_next(&track->album->artist->tree_node) == NULL)
-				return 0;
-			artist = to_artist(rb_next(&track->album->artist->tree_node));
-			album = to_album(rb_first(&artist->album_root));
-			track = to_tree_track(rb_first(&album->track_root));
-		} else {
-			album = to_album(rb_next(&track->album->tree_node));
-			track = to_tree_track(rb_first(&album->track_root));
-		}
-	} else {
-		track = to_tree_track(rb_next(&track->tree_node));
-	}
-	iter->data1 = track;
+//	struct rb_root *root = iter->data0;
+//	struct tree_track *track = iter->data1;
+//	struct artist *artist;
+//	struct album *album;
+//
+//	BUG_ON(iter->data2);
+//	if (root == NULL)
+//		return 0;
+//	if (track == NULL) {
+//		/* head, get first track */
+//		if (rb_root_empty(root)) {
+//			/* empty, iter points to the head already */
+//			return 0;
+//		}
+//		artist = to_artist(rb_first(root));
+//		album = to_album(rb_first(&artist->album_root));
+//		iter->data1 = to_tree_track(rb_first(&album->track_root));
+//		return 1;
+//	}
+//	/* next track */
+//	if (rb_next(&track->tree_node) == NULL || search_restricted) {
+//		/* next album */
+//		if (rb_next(&track->album->tree_node) == NULL) {
+//			/* next artist */
+//			if (rb_next(&track->album->artist->tree_node) == NULL)
+//				return 0;
+//			artist = to_artist(rb_next(&track->album->artist->tree_node));
+//			album = to_album(rb_first(&artist->album_root));
+//			track = to_tree_track(rb_first(&album->track_root));
+//		} else {
+//			album = to_album(rb_next(&track->album->tree_node));
+//			track = to_tree_track(rb_first(&album->track_root));
+//		}
+//	} else {
+//		track = to_tree_track(rb_next(&track->tree_node));
+//	}
+//	iter->data1 = track;
 	return 1;
 }
 /* }}} */
 
 /* tree window iterators {{{ */
-static int tree_get_prev(struct iter *iter)
+static int tree_get_prev(GList* iter)
 {
-	struct rb_root *root = iter->data0;
-	struct artist *artist = iter->data1;
-	struct album *album = iter->data2;
-
-	BUG_ON(root == NULL);
-	BUG_ON(artist == NULL && album != NULL);
-	if (artist == NULL) {
-		/* head, get last artist and/or album */
-		if (rb_root_empty(root)) {
-			/* empty, iter points to the head already */
-			return 0;
-		}
-		artist = to_artist(rb_last(root));
-		if (artist->expanded) {
-			album = to_album(rb_last(&artist->album_root));
-		} else {
-			album = NULL;
-		}
-		iter->data1 = artist;
-		iter->data2 = album;
-		return 1;
-	}
-	if (artist->expanded && album) {
-		/* prev album */
-		if (rb_prev(&album->tree_node) == NULL) {
-			iter->data2 = NULL;
-			return 1;
-		} else {
-			iter->data2 = to_album(rb_prev(&album->tree_node));
-			return 1;
-		}
-	}
-
-	/* prev artist */
-	if (rb_prev(&artist->tree_node) == NULL) {
-		iter->data1 = NULL;
-		iter->data2 = NULL;
-		return 0;
-	}
-	artist = to_artist(rb_prev(&artist->tree_node));
-	iter->data1 = artist;
-	iter->data2 = NULL;
-	if (artist->expanded) {
-		/* last album */
-		iter->data2 = to_album(rb_last(&artist->album_root));
-	}
+//	struct rb_root *root = iter->data0;
+//	struct artist *artist = iter->data1;
+//	struct album *album = iter->data2;
+//
+//	BUG_ON(root == NULL);
+//	BUG_ON(artist == NULL && album != NULL);
+//	if (artist == NULL) {
+//		/* head, get last artist and/or album */
+//		if (rb_root_empty(root)) {
+//			/* empty, iter points to the head already */
+//			return 0;
+//		}
+//		artist = to_artist(rb_last(root));
+//		if (artist->expanded) {
+//			album = to_album(rb_last(&artist->album_root));
+//		} else {
+//			album = NULL;
+//		}
+//		iter->data1 = artist;
+//		iter->data2 = album;
+//		return 1;
+//	}
+//	if (artist->expanded && album) {
+//		/* prev album */
+//		if (rb_prev(&album->tree_node) == NULL) {
+//			iter->data2 = NULL;
+//			return 1;
+//		} else {
+//			iter->data2 = to_album(rb_prev(&album->tree_node));
+//			return 1;
+//		}
+//	}
+//
+//	/* prev artist */
+//	if (rb_prev(&artist->tree_node) == NULL) {
+//		iter->data1 = NULL;
+//		iter->data2 = NULL;
+//		return 0;
+//	}
+//	artist = to_artist(rb_prev(&artist->tree_node));
+//	iter->data1 = artist;
+//	iter->data2 = NULL;
+//	if (artist->expanded) {
+//		/* last album */
+//		iter->data2 = to_album(rb_last(&artist->album_root));
+//	}
 	return 1;
 }
 
-static int tree_get_next(struct iter *iter)
+static int tree_get_next(GList* iter)
 {
-	struct rb_root *root = iter->data0;
-	struct artist *artist = iter->data1;
-	struct album *album = iter->data2;
-
-	BUG_ON(root == NULL);
-	BUG_ON(artist == NULL && album != NULL);
-	if (artist == NULL) {
-		/* head, get first artist */
-		if (rb_root_empty(root)) {
-			/* empty, iter points to the head already */
-			return 0;
-		}
-		iter->data1 = to_artist(rb_first(root));
-		iter->data2 = NULL;
-		return 1;
-	}
-	if (artist->expanded) {
-		/* next album */
-		if (album == NULL) {
-			/* first album */
-			iter->data2 = to_album(rb_first(&artist->album_root));
-			return 1;
-		}
-		if (rb_next(&album->tree_node) != NULL) {
-			iter->data2 = to_album(rb_next(&album->tree_node));
-			return 1;
-		}
-	}
-
-	/* next artist */
-	if (rb_next(&artist->tree_node) == NULL) {
-		iter->data1 = NULL;
-		iter->data2 = NULL;
-		return 0;
-	}
-	iter->data1 = to_artist(rb_next(&artist->tree_node));
-	iter->data2 = NULL;
+//	struct rb_root *root = iter->data0;
+//	struct artist *artist = iter->data1;
+//	struct album *album = iter->data2;
+//
+//	BUG_ON(root == NULL);
+//	BUG_ON(artist == NULL && album != NULL);
+//	if (artist == NULL) {
+//		/* head, get first artist */
+//		if (rb_root_empty(root)) {
+//			/* empty, iter points to the head already */
+//			return 0;
+//		}
+//		iter->data1 = to_artist(rb_first(root));
+//		iter->data2 = NULL;
+//		return 1;
+//	}
+//	if (artist->expanded) {
+//		/* next album */
+//		if (album == NULL) {
+//			/* first album */
+//			iter->data2 = to_album(rb_first(&artist->album_root));
+//			return 1;
+//		}
+//		if (rb_next(&album->tree_node) != NULL) {
+//			iter->data2 = to_album(rb_next(&album->tree_node));
+//			return 1;
+//		}
+//	}
+//
+//	/* next artist */
+//	if (rb_next(&artist->tree_node) == NULL) {
+//		iter->data1 = NULL;
+//		iter->data2 = NULL;
+//		return 0;
+//	}
+//	iter->data1 = to_artist(rb_next(&artist->tree_node));
+//	iter->data2 = NULL;
 	return 1;
 }
 /* }}} */
 
-static GENERIC_TREE_ITER_PREV(tree_track_get_prev_by_album, struct tree_track, tree_node)
-static GENERIC_TREE_ITER_NEXT(tree_track_get_next_by_album, struct tree_track, tree_node)
+//static GENERIC_TREE_ITER_PREV(tree_track_get_prev_by_album, struct tree_track, tree_node)
+//static GENERIC_TREE_ITER_NEXT(tree_track_get_next_by_album, struct tree_track, tree_node)
+
+static int tree_track_get_prev_by_album (GList* )
+{
+    return 0;
+}
+
+static int tree_track_get_next_by_album (GList* )
+{
+    return 0;
+}
 
 /* track window iterators by artist */
 static int tree_track_get_prev_by_artist(struct iter *iter)
@@ -420,11 +430,11 @@ static inline struct tree_track *iter_to_tree_search_track(const struct iter *it
 
 static int tree_search_matches(void *data, struct iter *iter, const char *text);
 
-static const struct searchable_ops tree_search_ops = {
-	.get_prev = tree_search_get_prev,
-	.get_next = tree_search_get_next,
-	.get_current = tree_search_get_current,
-	.matches = tree_search_matches
+static const SearchableOptions tree_search_ops = {
+	.GetPrev = tree_search_get_prev,
+	.GetNext = tree_search_get_next,
+	.GetCurrent = tree_search_get_current,
+	.Matches = tree_search_matches
 };
 /* search (tree) }}} */
 

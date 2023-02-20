@@ -406,7 +406,7 @@ void lib_init(void)
 	editable_shared_init(&lib_editable_shared, free_lib_track);
 	editable_init(&lib_editable, &lib_editable_shared, 1);
 	tree_init();
-	srand(time(NULL));
+    srand((unsigned int) time (NULL));
 }
 
 struct track_info *lib_set_track(struct tree_track *track)

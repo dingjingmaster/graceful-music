@@ -57,7 +57,7 @@ int ip_current_bitrate(InputPlugin* ip);
 char *ip_codec(InputPlugin* ip);
 char *ip_codec_profile(InputPlugin* ip);
 
-sample_format_t ip_get_sf(InputPlugin* ip);
+SampleFormat ip_get_sf(InputPlugin* ip);
 void ip_get_channel_map(InputPlugin* ip, ChannelPosition* channelMap);
 const char *ip_get_filename(InputPlugin* ip);
 const char *ip_get_metadata(InputPlugin* ip);

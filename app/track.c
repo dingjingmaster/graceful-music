@@ -30,12 +30,12 @@ struct simple_track *simple_track_new(struct track_info *ti)
 GENERIC_ITER_PREV(simple_track_get_prev, struct simple_track, node)
 GENERIC_ITER_NEXT(simple_track_get_next, struct simple_track, node)
 
-int simple_track_search_get_current(void *data, struct iter *iter)
+int simple_track_search_get_current(void *data, GList* iter)
 {
 	return window_get_sel(data, iter);
 }
 
-int _simple_track_search_matches(struct iter *iter, const char *text)
+int _simple_track_search_matches(GList* iter, const char *text)
 {
 	unsigned int flags = TI_MATCH_TITLE;
 	struct simple_track *track = iter_to_simple_track(iter);
@@ -46,7 +46,7 @@ int _simple_track_search_matches(struct iter *iter, const char *text)
 	return track_info_matches(track->info, text, flags);
 }
 
-int simple_track_search_matches(void *data, struct iter *iter, const char *text)
+int simple_track_search_matches(void *data, GList* iter, const char *text)
 {
 	int rc = _simple_track_search_matches(iter, text);
 	if (rc)

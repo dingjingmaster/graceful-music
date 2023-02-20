@@ -1,18 +1,21 @@
-#ifndef CMUS_PROG_H
-#define CMUS_PROG_H
+//
+// Created by dingjing on 23-2-20.
+//
 
+#ifndef GRACEFUL_MUSIC_PROG_H
+#define GRACEFUL_MUSIC_PROG_H
 #include "compiler.h"
 
 /* set in beginning of main */
 struct option {
-	/* short option or 0 */
-	int short_opt;
+    /* short option or 0 */
+    int short_opt;
 
-	/* long option or NULL */
-	const char *long_opt;
+    /* long option or NULL */
+    const char *long_opt;
 
-	/* does option have an argument */
-	int has_arg;
+    /* does option have an argument */
+    int has_arg;
 };
 
 /*
@@ -27,4 +30,5 @@ void warn_errno(const char *format, ...) CMUS_FORMAT(1, 2);
 void die(const char *format, ...) CMUS_FORMAT(1, 2) CMUS_NORETURN;
 void die_errno(const char *format, ...) CMUS_FORMAT(1, 2) CMUS_NORETURN;
 
-#endif
+
+#endif //GRACEFUL_MUSIC_PROG_H
