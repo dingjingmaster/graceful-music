@@ -1024,18 +1024,18 @@ void player_init(void)
 
 	int rc = pthread_attr_init(&attr);
 	rc = pthread_attr_setschedpolicy(&attr, SCHED_RR);
-	if (rc) {
+    if (rc) {
 		WARNING ("could not set real-time scheduling priority: %s", strerror(rc));
-	} else {
+	}
+    else {
 		struct sched_param param;
 		DEBUG ("using real-time scheduling");
 		param.sched_priority = sched_get_priority_max(SCHED_RR);
 		DEBUG ("setting priority to %d", param.sched_priority);
 		rc = pthread_attr_setschedparam(&attr, &param);
-		BUG_ON(rc);
+		DEBUG("rc = %d", rc);
 		attrP = &attr;
 	}
-
 
 	rc = pthread_create(&gProducerThread, NULL, producer_loop, NULL);
 	rc = pthread_create(&consumerThread, attrP, consumer_loop, NULL);
@@ -1043,7 +1043,6 @@ void player_init(void)
 		DEBUG ("could not create thread using real-time scheduling: %s", strerror(rc));
 		rc = pthread_create(&consumerThread, NULL, consumer_loop, NULL);
 	}
-
 
 	/* update player_info_priv.cont etc. */
 	player_lock();

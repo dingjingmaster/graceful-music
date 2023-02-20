@@ -89,7 +89,7 @@ static void help_add_text(const char *s)
 
 static void help_add_defaults(void)
 {
-	struct cmus_opt *opt;
+	Option *opt;
 
 	help_add_text("Keybindings");
 	help_add_text("-----------");
@@ -102,13 +102,13 @@ static void help_add_defaults(void)
 	help_add_text("Options");
 	help_add_text("-------");
 
-	list_for_each_entry(opt, &option_head, node) {
-		struct help_entry *ent = xnew(struct help_entry, 1);
-
-		ent->type = HE_OPTION;
-		ent->option = opt;
-		list_add_tail(&ent->node, &help_head);
-	}
+    for (GList* l = gOptionHeader; l; l = l->next) {
+        opt = l->data;
+        struct help_entry* ent = g_malloc0 (sizeof (struct help_entry));
+        ent->type = HE_OPTION;
+        ent->option = opt;
+        list_add_tail(&ent->node, &help_head);
+    }
 
 	bound_tail = bound_head->next;
 	unbound_tail = unbound_head->next;

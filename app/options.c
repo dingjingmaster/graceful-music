@@ -194,7 +194,7 @@ static int parse_bool(const char *buf, int *val)
 	return parse_enum(buf, 0, 1, bool_names, val);
 }
 
-/* this is used as id in struct cmus_opt */
+/* this is used as id in Option */
 enum format_id {
 	FMT_CLIPPED_TEXT,
 	FMT_CURRENT,
@@ -217,10 +217,11 @@ enum format_id {
 
 /* default values for the variables which we must initialize but
  * can't do it statically */
-static const struct {
+static const struct
+{
 	const char *name;
 	const char *value;
-} str_defaults[] = {
+} gStrDefaults [] = {
 	[FMT_CLIPPED_TEXT]	= { "format_clipped_text"	, "…"							},
 	[FMT_CURRENT_ALT]	= { "altformat_current"		, " %F "						},
 	[FMT_CURRENT]		= { "format_current"		, " %a - %l%! - %n. %t%= %y "				},
@@ -1418,7 +1419,7 @@ static const struct {
 	opt_set_cb set;
 	opt_toggle_cb toggle;
 	unsigned int flags;
-} simple_options[] = {
+} gSimpleOptions[] = {
 	DT(aaa_mode)
 	DT(auto_reshuffle)
 	DN_FLAGS(device, OPT_PROGRAM_PATH)
@@ -1472,7 +1473,7 @@ static const struct {
 	{ NULL, NULL, NULL, NULL, 0 }
 };
 
-static const char * const color_names[NR_COLORS] = {
+static const char * const gColorNames[NR_COLORS] = {
 	"color_cmdline_bg",
 	"color_cmdline_fg",
 	"color_error",
@@ -1500,7 +1501,7 @@ static const char * const color_names[NR_COLORS] = {
 	"color_trackwin_album_fg",
 };
 
-static const char * const attr_names[NR_ATTRS] = {
+static const char * const gAttrNames[NR_ATTRS] = {
 	"color_cmdline_attr",
 	"color_statusline_attr",
 	"color_titleline_attr",
@@ -1515,14 +1516,19 @@ static const char * const attr_names[NR_ATTRS] = {
 	"color_win_cur_attr",
 };
 
-LIST_HEAD(option_head);
-int nr_options = 0;
+int                     gOptionsNum = 0;
+GList*                  gOptionHeader;
 
-void option_add(const char *name, const void *data, opt_get_cb get,
-		opt_set_cb set, opt_toggle_cb toggle, unsigned int flags)
+static int option_name_compare (const Option* a, const Option* b)
 {
-	struct cmus_opt *opt = xnew(struct cmus_opt, 1);
-	struct list_head *item;
+    if (!a || !b)           {return -1;}
+
+    return g_strcmp0 (a->name, b->name);
+}
+
+void option_add(const char *name, const void *data, opt_get_cb get, opt_set_cb set, opt_toggle_cb toggle, unsigned int flags)
+{
+	Option* opt = g_malloc0 (sizeof (Option));
 
 	opt->name = name;
 	opt->data = (void *)data;
@@ -1531,71 +1537,62 @@ void option_add(const char *name, const void *data, opt_get_cb get,
 	opt->toggle = toggle;
 	opt->flags = flags;
 
-	item = option_head.next;
-	while (item != &option_head) {
-		struct cmus_opt *o = container_of(item, struct cmus_opt, node);
+    gOptionHeader = g_list_insert_sorted (gOptionHeader, opt, (GCompareFunc) option_name_compare);
 
-		if (strcmp(name, o->name) < 0)
-			break;
-		item = item->next;
-	}
-	/* add before item */
-	list_add_tail(&opt->node, item);
-	nr_options++;
+	++gOptionsNum;
 }
 
-struct cmus_opt *option_find(const char *name)
+Option* option_find(const char *name)
 {
-	struct cmus_opt *opt = option_find_silent(name);
-	if (opt == NULL)
-		error_msg("no such option %s", name);
+	Option *opt = option_find_silent(name);
+	if (opt == NULL) {
+        ERROR ("no such option %s", name);
+    }
 	return opt;
 }
 
-struct cmus_opt *option_find_silent(const char *name)
+Option *option_find_silent(const char *name)
 {
-	struct cmus_opt *opt;
+    for (GList* l = gOptionHeader; l; l = l->next) {
+        Option* opt = l->data;
+        if (0 == g_strcmp0 (name, opt->name)) {
+            return opt;
+        }
+    }
 
-	list_for_each_entry(opt, &option_head, node) {
-		if (strcmp(name, opt->name) == 0)
-			return opt;
-	}
 	return NULL;
 }
 
 void option_set(const char *name, const char *value)
 {
-	struct cmus_opt *opt = option_find(name);
+	Option *opt = option_find(name);
 
 	if (opt)
 		opt->set(opt->data, value);
 }
 
-void options_add(void)
+void options_add (void)
 {
-	int i;
+	for (int i = 0; gSimpleOptions[i].name; i++) {
+        option_add (gSimpleOptions[i].name, NULL, gSimpleOptions[i].get, gSimpleOptions[i].set, gSimpleOptions[i].toggle, gSimpleOptions[i].flags);
+    }
 
-	for (i = 0; simple_options[i].name; i++)
-		option_add(simple_options[i].name, NULL, simple_options[i].get,
-				simple_options[i].set, simple_options[i].toggle,
-				simple_options[i].flags);
+	for (int i = 0; i < NR_FMTS; i++) {
+        option_add (gStrDefaults[i].name, id_to_fmt(i), get_format, set_format, NULL, 0);
+    }
 
-	for (i = 0; i < NR_FMTS; i++)
-		option_add(str_defaults[i].name, id_to_fmt(i), get_format,
-				set_format, NULL, 0);
+	option_find ("format_clipped_text")->set = set_clipped_text_format;
 
-	option_find("format_clipped_text")->set = set_clipped_text_format;
+	for (int i = 0; i < NR_COLORS; i++) {
+        option_add (gColorNames[i], &colors[i], get_color, set_color, NULL, 0);
+    }
 
-	for (i = 0; i < NR_COLORS; i++)
-		option_add(color_names[i], &colors[i], get_color, set_color,
-				NULL, 0);
+	for (int i = 0; i < NR_ATTRS; i++) {
+        option_add (gAttrNames[i], &attrs[i], get_attr, set_attr, NULL, 0);
+    }
 
-	for (i = 0; i < NR_ATTRS; i++)
-		option_add(attr_names[i], &attrs[i], get_attr, set_attr, NULL,
-				0);
-
-	ip_add_options();
-	op_add_options();
+	ip_add_options ();
+	op_add_options ();
 }
 
 static int handle_line(void *data, const char *line)
@@ -1616,8 +1613,8 @@ void options_load(void)
 
 	/* initialize those that can't be statically initialized */
 	cdda_device = get_default_cdda_device();
-	for (i = 0; str_defaults[i].name; i++)
-		option_set(str_defaults[i].name, str_defaults[i].value);
+	for (i = 0; gStrDefaults[i].name; i++)
+		option_set(gStrDefaults[i].name, gStrDefaults[i].value);
 
 	/* load autosave config */
 	snprintf(filename, sizeof(filename), "%s/autosave", gConfigDir);
@@ -1644,14 +1641,14 @@ void options_load(void)
 	}
 
 	/* replace the default format_clipped_text symbol in ascii terminal */
-	if (!gUsingUtf8 && strcmp(clipped_text_format, str_defaults[FMT_CLIPPED_TEXT].value) == 0) {
+	if (!gUsingUtf8 && strcmp(clipped_text_format, gStrDefaults[FMT_CLIPPED_TEXT].value) == 0) {
 		clipped_text_internal = xstrdup("...");
 	}
 }
 
-void options_exit(void)
+void options_exit (void)
 {
-	struct cmus_opt *opt;
+	Option *opt;
 	struct filter_entry *filt;
 	char filename_tmp[512];
 	char filename[512];
@@ -1667,13 +1664,15 @@ void options_exit(void)
 	}
 
 	/* save options */
-	list_for_each_entry(opt, &option_head, node) {
-		char buf[OPTION_MAX_SIZE];
+    for (GList* l = gOptionHeader; l; l = l->next) {
+        Option* opt = l->data;
 
-		buf[0] = 0;
-		opt->get(opt->data, buf, OPTION_MAX_SIZE);
-		fprintf(f, "set %s=%s\n", opt->name, buf);
-	}
+        char buf[OPTION_MAX_SIZE] = {0};
+
+        opt->get(opt->data, buf, OPTION_MAX_SIZE);
+        fprintf(f, "set %s=%s\n", opt->name, buf);
+
+    }
 
 	/* save key bindings */
 	for (i = 0; i < NR_CTXS; i++) {
@@ -1850,7 +1849,7 @@ void resume_exit(void)
 	fprintf(f, "view %s\n", view_names[cur_view]);
 	if (lib_live_filter)
 		fprintf(f, "live-filter %s\n", escape(lib_live_filter));
-	fprintf(f, "browser-dir %s\n", escape(browser_dir));
+	fprintf(f, "browser-dir %s\n", escape(gBrowserDir));
 
 	fprintf(f, "marked-pl %s\n", escape(pl_marked_pl_name()));
 

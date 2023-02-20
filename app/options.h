@@ -1,19 +1,25 @@
 #ifndef CMUS_OPTIONS_H
 #define CMUS_OPTIONS_H
 
+#include <glib.h>
+
 #include "list.h"
 
 #define OPTION_MAX_SIZE	4096
+
+typedef struct _Option          Option;
 
 typedef void (*opt_get_cb)(void *data, char *buf, size_t size);
 typedef void (*opt_set_cb)(void *data, const char *buf);
 typedef void (*opt_toggle_cb)(void *data);
 
-enum {
+enum
+{
 	OPT_PROGRAM_PATH = 1 << 0,
 };
 
-struct cmus_opt {
+struct _Option
+{
 	struct list_head node;
 
 	const char *name;
@@ -33,8 +39,8 @@ struct cmus_opt {
 	unsigned int flags;
 };
 
-extern struct list_head option_head;
-extern int nr_options;
+extern int              gOptionsNum;
+extern GList*           gOptionHeader;
 
 enum {
 	TREE_VIEW,
@@ -201,8 +207,8 @@ void resume_exit(void);
 
 void option_add(const char *name, const void *data, opt_get_cb get,
 		opt_set_cb set, opt_toggle_cb toggle, unsigned int flags);
-struct cmus_opt *option_find(const char *name);
-struct cmus_opt *option_find_silent(const char *name);
+Option* option_find(const char *name);
+Option* option_find_silent(const char *name);
 void option_set(const char *name, const char *value);
 int parse_enum(const char *buf, int minval, int maxval, const char * const names[], int *val);
 

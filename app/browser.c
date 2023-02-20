@@ -1,5 +1,6 @@
 #include "browser.h"
 
+#include "log.h"
 #include "file.h"
 #include "misc.h"
 #include "uchar.h"
@@ -9,17 +10,17 @@
 #include "ui_curses.h"
 #include "graceful-music.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <string.h>
+#include <gio/gio.h>
+#include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/types.h>
 
 struct window *browser_win;
 struct searchable *browser_searchable;
-char *browser_dir;
+char*                       gBrowserDir;
 
 static LIST_HEAD(browser_head);
 
@@ -112,14 +113,15 @@ static int add_pl_line(void *data, const char *line)
 	return 0;
 }
 
-static int do_browser_load(const char *name)
+static int do_browser_load(const char* name)
 {
 	struct stat st;
 
-	if (stat(name, &st))
-		return -1;
+	if (stat(name, &st)) {
+        return -1;
+    }
 
-	if (S_ISREG(st.st_mode) && gm_is_playlist(name)) {
+    if (S_ISREG(st.st_mode) && gm_is_playlist(name)) {
 		char *buf;
 		ssize_t size;
 
@@ -138,17 +140,20 @@ static int do_browser_load(const char *name)
 			gm_playlist_for_each(buf, size, 0, add_pl_line, NULL);
 			munmap(buf, size);
 		}
-	} else if (S_ISDIR(st.st_mode)) {
-		int (*filter)(const char *, const struct stat *) = normal_filter;
+    }
+    else if (S_ISDIR(st.st_mode)) {
+		int (*filter) (const char *, const struct stat *) = normal_filter;
 		struct directory dir;
 		const char *str;
 		int root = !strcmp(name, "/");
 
-		if (show_hidden)
-			filter = hidden_filter;
+		if (show_hidden) {
+            filter = hidden_filter;
+        }
 
-		if (dir_open(&dir, name))
-			return -1;
+		if (dir_open(&dir, name)) {
+            return -1;
+        }
 
 		free_browser_list();
 		while ((str = dir_read(&dir))) {
@@ -156,14 +161,16 @@ static int do_browser_load(const char *name)
 			struct list_head *item;
 			int len;
 
-			if (!filter(str, &dir.st))
-				continue;
+			if (!filter(str, &dir.st)) {
+                continue;
+            }
 
 			/* ignore .. if we are in the root dir */
-			if (root && !strcmp(str, ".."))
-				continue;
+			if (root && !strcmp(str, "..")) {
+                continue;
+            }
 
-			len = strlen(str);
+			len = (int) strlen (str);
 			e = xmalloc(sizeof(struct browser_entry) + len + 2);
 			e->type = BROWSER_ENTRY_FILE;
 			memcpy(e->name, str, len);
@@ -190,24 +197,27 @@ static int do_browser_load(const char *name)
 		/* try to update currect working directory */
 		if (chdir(name))
 			return -1;
-	} else {
+	}
+    else {
 		errno = ENOTDIR;
 		return -1;
 	}
 	return 0;
 }
 
-static int browser_load(const char *name)
+static int browser_load (const char *name)
 {
 	int rc;
 
 	rc = do_browser_load(name);
-	if (rc)
-		return rc;
+	if (rc) {
+        LOG_WARNING("load dir '%s' error!", name);
+        return rc;
+    }
 
 	window_set_contents(browser_win, &browser_head);
-	free(browser_dir);
-	browser_dir = xstrdup(name);
+	free(gBrowserDir);
+	gBrowserDir = g_strdup (name);
 	return 0;
 }
 
@@ -252,21 +262,22 @@ static const struct searchable_ops browser_search_ops = {
 
 void browser_init(void)
 {
-	struct iter iter;
-	char cwd[1024];
-	char *dir;
+	struct iter             iter;
+	char                    cwd[1024] = {0};
+	g_autofree char*        dir = NULL;
 
-	if (getcwd(cwd, sizeof(cwd)) == NULL) {
-		dir = xstrdup("/");
-	} else {
-		dir = xstrdup(cwd);
-	}
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        dir = g_strdup ("/");
+    }
+    else {
+		dir = g_strdup (cwd);
+    }
+
 	if (do_browser_load(dir)) {
-		free(dir);
 		do_browser_load("/");
-		browser_dir = xstrdup("/");
+		gBrowserDir = g_strdup ("/");
 	} else {
-		browser_dir = dir;
+		gBrowserDir = g_strdup (dir);
 	}
 
 	browser_win = window_new(browser_get_prev, browser_get_next);
@@ -284,7 +295,7 @@ void browser_exit(void)
 	searchable_free(browser_searchable);
 	free_browser_list();
 	window_free(browser_win);
-	free(browser_dir);
+	free(gBrowserDir);
 }
 
 int browser_chdir(const char *dir)
@@ -300,14 +311,14 @@ void browser_up(void)
 	struct browser_entry *e;
 	int len;
 
-	if (strcmp(browser_dir, "/") == 0)
+	if (strcmp(gBrowserDir, "/") == 0)
 		return;
 
-	ptr = strrchr(browser_dir, '/');
-	if (ptr == browser_dir) {
+	ptr = strrchr(gBrowserDir, '/');
+	if (ptr == gBrowserDir) {
 		new = xstrdup("/");
 	} else {
-		new = xstrndup(browser_dir, ptr - browser_dir);
+		new = xstrndup(gBrowserDir, ptr - gBrowserDir);
 	}
 
 	/* remember old position */
@@ -319,8 +330,8 @@ void browser_up(void)
 	if (browser_load(new)) {
 		if (errno == ENOENT) {
 			free(pos);
-			free(browser_dir);
-			browser_dir = new;
+			free(gBrowserDir);
+			gBrowserDir = new;
 			browser_up();
 			return;
 		}
@@ -355,7 +366,7 @@ static void browser_cd(const char *dir)
 		return;
 	}
 
-	new = fullname(browser_dir, dir);
+	new = fullname(gBrowserDir, dir);
 	len = strlen(new);
 	if (new[len - 1] == '/')
 		new[len - 1] = 0;
@@ -390,7 +401,7 @@ void browser_enter(void)
 		} else {
 			char *filename;
 
-			filename = fullname(browser_dir, e->name);
+			filename = fullname(gBrowserDir, e->name);
 			if (gm_is_playlist(filename)) {
 				browser_cd_playlist(filename);
 			} else {
@@ -413,7 +424,7 @@ char *browser_get_sel(void)
 	if (e->type == BROWSER_ENTRY_PLLINE)
 		return xstrdup(e->name);
 
-	return fullname(browser_dir, e->name);
+	return fullname(gBrowserDir, e->name);
 }
 
 void browser_delete(void)
@@ -431,7 +442,7 @@ void browser_delete(void)
 	if (e->type == BROWSER_ENTRY_FILE) {
 		char *name;
 
-		name = fullname(browser_dir, e->name);
+		name = fullname(gBrowserDir, e->name);
 		if (yes_no_query("Delete file '%s'? [y/N]", e->name) == UI_QUERY_ANSWER_YES) {
 			if (unlink(name) == -1) {
 				error_msg("deleting '%s': %s", e->name, strerror(errno));
@@ -447,7 +458,7 @@ void browser_delete(void)
 
 void browser_reload(void)
 {
-	char *tmp = xstrdup(browser_dir);
+	char *tmp = g_strdup(gBrowserDir);
 	char *sel = NULL;
 	struct iter iter;
 	struct browser_entry *e;

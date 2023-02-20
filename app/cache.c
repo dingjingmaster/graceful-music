@@ -33,7 +33,7 @@
 #define CACHE_ENTRY_TOTAL_SIZE	(CACHE_ENTRY_RESERVED_SIZE + CACHE_ENTRY_USED_SIZE)
 
 // Cmus Track Cache version X + 4 bytes flags
-static char cache_header[8] = "CTC\0\0\0\0\0";
+static char gCacheHeader[8] = "CTC\0\0\0\0\0";
 
 // host byte order
 // mtime is either 32 or 64 bits
@@ -63,7 +63,7 @@ STATIC_ASSERT(CACHE_ENTRY_TOTAL_SIZE == offsetof(struct cache_entry, strings));
 #define HASH_SIZE 1023
 
 static struct track_info *hash_table[HASH_SIZE];
-static char *cache_filename;
+static char*        gCacheFilename;
 static int total;
 
 struct fifo_mutex cache_mutex = FIFO_MUTEX_INITIALIZER;
@@ -192,52 +192,59 @@ void cache_remove_ti(struct track_info *ti)
 
 static int read_cache(void)
 {
-	unsigned int size, offset = 0;
-	struct stat st = {};
-	char *buf;
-	int fd;
+    unsigned int size, offset = 0;
+    struct stat st = {};
+    char *buf;
 
-	fd = open(cache_filename, O_RDONLY);
-	if (fd < 0) {
-		if (errno == ENOENT)
-			return 0;
-		return -1;
+    int fd = open(gCacheFilename, O_RDONLY);
+    if (fd < 0) {
+        if (errno == ENOENT) {
+            return 0;
+        }
+        return -1;
+    }
+    fstat(fd, &st);
+    if (st.st_size < sizeof (gCacheHeader)) {
+        goto close;
+    }
+    size = st.st_size;
+
+    buf = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (buf == MAP_FAILED) {
+        close(fd);
+        return -1;
+    }
+
+    if (memcmp(buf, gCacheHeader, sizeof(gCacheHeader))) {
+        goto corrupt;
+    }
+
+    offset = sizeof(gCacheHeader);
+    while (offset < size) {
+        struct cache_entry *e = (void *)(buf + offset);
+        struct track_info *ti;
+
+        if (!valid_cache_entry(e, size - offset)) {
+            goto corrupt;
+        }
+
+        ti = cache_entry_to_ti(e);
+        add_ti(ti, hash_str(ti->filename));
+        offset += ALIGN(e->size);
 	}
-	fstat(fd, &st);
-	if (st.st_size < sizeof(cache_header))
-		goto close;
-	size = st.st_size;
 
-	buf = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (buf == MAP_FAILED) {
-		close(fd);
-		return -1;
-	}
+    munmap(buf, size);
+    close(fd);
 
-	if (memcmp(buf, cache_header, sizeof(cache_header)))
-		goto corrupt;
+    return 0;
 
-	offset = sizeof(cache_header);
-	while (offset < size) {
-		struct cache_entry *e = (void *)(buf + offset);
-		struct track_info *ti;
-
-		if (!valid_cache_entry(e, size - offset))
-			goto corrupt;
-
-		ti = cache_entry_to_ti(e);
-		add_ti(ti, hash_str(ti->filename));
-		offset += ALIGN(e->size);
-	}
-	munmap(buf, size);
-	close(fd);
-	return 0;
 corrupt:
-	munmap(buf, size);
+    munmap(buf, size);
+
 close:
-	close(fd);
-	// corrupt
-	return -2;
+    close(fd);
+    // corrupt
+    return -2;
 }
 
 int cache_init(void)
@@ -247,18 +254,20 @@ int cache_init(void)
 #ifdef WORDS_BIGENDIAN
 	flags |= CACHE_BE;
 #endif
-	if (sizeof(long) == 8)
-		flags |= CACHE_64_BIT;
+	if (sizeof(long) == 8) {
+        flags |= CACHE_64_BIT;
+    }
 
-	cache_header[7] = flags & 0xff; flags >>= 8;
-	cache_header[6] = flags & 0xff; flags >>= 8;
-	cache_header[5] = flags & 0xff; flags >>= 8;
-	cache_header[4] = flags & 0xff;
+	gCacheHeader[7] = flags & 0xff; flags >>= 8;
+	gCacheHeader[6] = flags & 0xff; flags >>= 8;
+	gCacheHeader[5] = flags & 0xff; flags >>= 8;
+	gCacheHeader[4] = flags & 0xff;
 
 	/* assumed version */
-	cache_header[3] = CACHE_VERSION;
+	gCacheHeader[3] = CACHE_VERSION;
 
-	cache_filename = xstrjoin(gConfigDir, "/cache");
+    gCacheFilename = g_strdup_printf ("%s/cache", gConfigDir);
+
 	return read_cache();
 }
 
@@ -372,8 +381,8 @@ int cache_close(void)
 	tis = get_track_infos(false);
 
 	gbuf_grow(&buf, 64 * 1024 - 1);
-	gbuf_add_bytes(&buf, cache_header, sizeof(cache_header));
-	offset = sizeof(cache_header);
+	gbuf_add_bytes(&buf, gCacheHeader, sizeof(gCacheHeader));
+	offset = sizeof(gCacheHeader);
 	for (i = 0; i < total; i++)
 		write_ti(fd, &buf, tis[i], &offset);
 	flush_buffer(fd, &buf);
@@ -381,7 +390,7 @@ int cache_close(void)
 	free(tis);
 
 	close(fd);
-	rc = rename(tmp, cache_filename);
+	rc = rename(tmp, gCacheFilename);
 	free(tmp);
 	return rc;
 }

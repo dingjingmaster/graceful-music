@@ -2,9 +2,10 @@
 #define CMUS_HELP_H
 
 #include "list.h"
+#include "keys.h"
 #include "window.h"
 #include "search.h"
-#include "keys.h"
+#include "options.h"
 
 struct help_entry {
 	struct list_head node;
@@ -18,7 +19,7 @@ struct help_entry {
 		const char *text;			/* HE_TEXT	*/
 		const struct binding *binding;		/* HE_BOUND	*/
 		const struct command *command;		/* HE_UNBOUND	*/
-		const struct cmus_opt *option;
+		const Option *option;
 	};
 };
 

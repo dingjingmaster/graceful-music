@@ -83,7 +83,7 @@ static int cmd_status(struct client *client)
 		NULL
 	};
 	const struct track_info *ti;
-	struct cmus_opt *opt;
+	Option *opt;
 	char optbuf[OPTION_MAX_SIZE];
 	GBUF(buf);
 	int vol_left, vol_right;

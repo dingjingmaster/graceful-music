@@ -39,7 +39,7 @@
 /* save_playlist_cb, save_ext_playlist_cb */
 typedef int (*save_tracks_cb)(void *data, struct track_info *ti);
 
-static char **playable_exts;
+static char**       gPlayableExts;
 static const char * const playlist_exts[] = { "m3u", "pl", "pls", NULL };
 
 int gNextTrackRequestFd;
@@ -57,10 +57,12 @@ static int (*x11_close)(void *) = NULL;
 
 int gm_init (void)
 {
-    playable_exts = ip_get_supported_extensions();
+    gPlayableExts = ip_get_supported_extensions();
+
     cache_init();
     job_init();
     play_queue_init();
+
     return 0;
 }
 
@@ -345,7 +347,7 @@ static int str_in_array(const char *str, const char * const *array)
     return 0;
 }
 
-int gm_is_playlist(const char *filename)
+int gm_is_playlist(const char* filename)
 {
     const char *ext = get_ext(filename);
 
@@ -356,14 +358,14 @@ int gm_is_playable(const char *filename)
 {
     const char *ext = get_ext(filename);
 
-    return ext && str_in_array(ext, (const char * const *)playable_exts);
+    return ext && str_in_array(ext, (const char * const *)gPlayableExts);
 }
 
 int gm_is_supported(const char *filename)
 {
     const char *ext = get_ext(filename);
 
-    return ext && (str_in_array(ext, (const char * const *)playable_exts) || str_in_array(ext, playlist_exts));
+    return ext && (str_in_array(ext, (const char * const *)gPlayableExts) || str_in_array(ext, playlist_exts));
 }
 
 struct pl_data

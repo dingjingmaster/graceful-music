@@ -39,7 +39,7 @@ static struct simple_track *pl_playing_track;
 static struct playlist *pl_playing;
 
 static int pl_cursor_in_track_window;
-struct editable_shared pl_editable_shared;
+EditableShared                  pl_editable_shared;
 static LIST_HEAD(pl_head); /* never empty */
 
 static struct searchable *pl_searchable;
@@ -540,8 +540,9 @@ void pl_init(void)
 	editable_shared_init(&pl_editable_shared, pl_free_track);
 
 	pl_load_all();
-	if (list_empty(&pl_head))
-		pl_create_default();
+	if (list_empty(&pl_head)) {
+        pl_create_default();
+    }
 
 	pl_sort_all();
 

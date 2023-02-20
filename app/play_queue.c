@@ -4,7 +4,7 @@
 #include "xmalloc.h"
 
 struct editable pq_editable;
-static struct editable_shared pq_editable_shared;
+static EditableShared 					gPlayQueueEditableShared;
 
 static void pq_free_track(struct editable *e, struct list_head *item)
 {
@@ -16,8 +16,8 @@ static void pq_free_track(struct editable *e, struct list_head *item)
 
 void play_queue_init(void)
 {
-	editable_shared_init(&pq_editable_shared, pq_free_track);
-	editable_init(&pq_editable, &pq_editable_shared, 1);
+	editable_shared_init(&gPlayQueueEditableShared, pq_free_track);
+	editable_init(&pq_editable, &gPlayQueueEditableShared, 1);
 }
 
 void play_queue_append(struct track_info *ti, void *opaque)

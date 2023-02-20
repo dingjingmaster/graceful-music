@@ -24,7 +24,7 @@ static struct simple_track *get_selected(struct editable *e)
 	return NULL;
 }
 
-void editable_shared_init(struct editable_shared *shared,
+void editable_shared_init(EditableShared *shared,
 		editable_free_track free_track)
 {
 	shared->win = window_new(simple_track_get_prev, simple_track_get_next);
@@ -39,8 +39,7 @@ void editable_shared_init(struct editable_shared *shared,
 			&simple_search_ops);
 }
 
-void editable_init(struct editable *e, struct editable_shared *shared,
-		int take_ownership)
+void editable_init(struct editable *e, EditableShared *shared, int takeOwnership)
 {
 	list_init(&e->head);
 	e->tree_root = RB_ROOT;
@@ -49,9 +48,9 @@ void editable_init(struct editable *e, struct editable_shared *shared,
 	e->total_time = 0;
 	e->shared = shared;
 
-
-	if (take_ownership)
-		editable_take_ownership(e);
+	if (takeOwnership) {
+        editable_take_ownership(e);
+    }
 }
 
 static int editable_owns_shared(struct editable *e)
@@ -144,8 +143,7 @@ void editable_sort(struct editable *e)
 	}
 }
 
-void editable_shared_set_sort_keys(struct editable_shared *shared,
-		sort_key_t *keys)
+void editable_shared_set_sort_keys(EditableShared *shared, sort_key_t *keys)
 {
 	free(shared->sort_keys);
 	shared->sort_keys = keys;

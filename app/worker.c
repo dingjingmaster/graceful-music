@@ -4,10 +4,13 @@
 #include "xmalloc.h"
 #include "debug.h"
 #include "job.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <pthread.h>
+
+typedef enum _WorkerState           WorkerState;
 
 struct worker_job {
 	struct list_head node;
@@ -18,7 +21,8 @@ struct worker_job {
 	void *data;
 };
 
-enum worker_state {
+enum _WorkerState
+{
 	WORKER_PAUSED,
 	WORKER_RUNNING,
 	WORKER_STOPPED,
@@ -27,8 +31,8 @@ enum worker_state {
 static LIST_HEAD(worker_job_head);
 static pthread_mutex_t worker_mutex = GM_MUTEX_INITIALIZER;
 static pthread_cond_t worker_cond = PTHREAD_COND_INITIALIZER;
-static pthread_t worker_thread;
-static enum worker_state state = WORKER_PAUSED;
+static pthread_t                    gWorkerThread;
+static WorkerState                  state = WORKER_PAUSED;
 static int cancel_current = 0;
 
 /*
@@ -55,7 +59,7 @@ static void *worker_loop(void *arg)
 
 			rc = pthread_cond_wait(&worker_cond, &worker_mutex);
 			if (rc)
-				d_print("pthread_cond_wait: %s\n", strerror(rc));
+				DEBUG("pthread_cond_wait: %s", strerror(rc));
 		} else {
 			struct list_head *item = worker_job_head.next;
 			uint64_t t;
@@ -86,12 +90,12 @@ static void *worker_loop(void *arg)
 
 void worker_init(void)
 {
-	int rc = pthread_create(&worker_thread, NULL, worker_loop, NULL);
+	int rc = pthread_create(&gWorkerThread, NULL, worker_loop, NULL);
 
 	BUG_ON(rc);
 }
 
-static void worker_set_state(enum worker_state s)
+static void worker_set_state(WorkerState s)
 {
 	worker_lock();
 	state = s;
@@ -107,7 +111,7 @@ void worker_start(void)
 void worker_exit(void)
 {
 	worker_set_state(WORKER_STOPPED);
-	pthread_join(worker_thread, NULL);
+	pthread_join(gWorkerThread, NULL);
 }
 
 void worker_add_job(uint32_t type, void (*job_cb)(void *data),

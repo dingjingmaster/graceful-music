@@ -193,7 +193,7 @@ static const struct format_option *find_fopt(const struct format_option *fopts, 
 static const char *str_val(const char *key, const struct format_option *fopts, char *buf)
 {
 	const struct format_option *fo;
-	const struct cmus_opt *opt;
+	const Option *opt;
 	const char *val = NULL;
 
 	fo = find_fopt(fopts, key);
@@ -230,7 +230,7 @@ static int format_eval_cond(struct expr* expr, const struct format_option *fopts
 	enum expr_type type = expr->type;
 	const char *key;
 	const struct format_option *fo;
-	const struct cmus_opt *opt;
+	const Option *opt;
 	char buf[OPTION_MAX_SIZE];
 
 	if (expr->left) {

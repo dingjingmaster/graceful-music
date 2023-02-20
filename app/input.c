@@ -924,19 +924,15 @@ static void get_ip_priority(void *data, char *val, size_t size)
 
 void ip_add_options(void)
 {
-    Input* ip;
-    const InputPluginOpt* ipo;
-    char key[64];
-
     ip_rdlock();
-//    list_for_each_entry(ip, &ip_head, node) {
-//        for (ipo = ip->options; ipo->name; ipo++) {
-//            snprintf(key, sizeof(key), "input.%s.%s", ip->name, ipo->name);
-//            option_add(xstrdup(key), ipo, get_ip_option, set_ip_option, NULL, 0);
-//        }
-//        snprintf(key, sizeof(key), "input.%s.priority", ip->name);
-//        option_add(xstrdup(key), ip, get_ip_priority, set_ip_priority, NULL, 0);
-//    }
+
+    for (GList* l = gInputPlugins->plugins; l; l = l->next) {
+        char key[64] = {0};
+        InputPlugin* p = l->data;
+        snprintf(key, sizeof(key), "input.%s.%s", p->name, p->option->name);
+        option_add (g_strdup(key), p->option, get_ip_option, set_ip_option, NULL, 0);
+    }
+
     ip_unlock();
 }
 
@@ -1010,29 +1006,32 @@ char *ip_get_error_msg (InputPlugin* ip, int rc, const char *arg)
 
 char** ip_get_supported_extensions(void)
 {
+    if (!gInputPlugins) return NULL;
+
     Input* ip;
-    char **exts;
-    int i, size;
     int count = 0;
 
-    size = 8;
-    exts = xnew(char *, size);
     ip_rdlock();
-//    list_for_each_entry(ip, &ip_head, node) {
-//        const char * const *e = ip->extensions;
-//
-//        for (i = 0; e[i]; i++) {
-//            if (count == size - 1) {
-//                size *= 2;
-//                exts = xrenew(char *, exts, size);
-//            }
-//            exts[count++] = xstrdup(e[i]);
-//        }
-//    }
+
+    guint size = g_hash_table_size (gInputPlugins->pluginExtIndex) + 1;
+    char** supportExtends = g_malloc0 (sizeof (char*) * size);
+
+    GList* ls = g_hash_table_get_keys (gInputPlugins->pluginExtIndex);
+
+    for (GList* l = ls; l != NULL; l = l->next) {
+        supportExtends[count] = g_strdup (l->data);
+        DEBUG("support ext: %s", l->data);
+        ++count;
+    }
+    g_list_free (ls);
+
     ip_unlock();
-    exts[count] = NULL;
-    qsort(exts, count, sizeof(char *), strptrcmp);
-    return exts;
+
+    supportExtends[count] = NULL;
+
+    qsort(supportExtends, count, sizeof(char*), (void*) g_strcmp0);
+
+    return supportExtends;
 }
 
 void ip_dump_plugins (void)

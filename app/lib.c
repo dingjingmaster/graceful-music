@@ -12,7 +12,7 @@
 #include <string.h>
 
 struct editable lib_editable;
-static struct editable_shared lib_editable_shared;
+static EditableShared           lib_editable_shared;
 
 struct tree_track *lib_cur_track = NULL;
 unsigned int play_sorted = 0;

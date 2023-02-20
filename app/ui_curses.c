@@ -44,24 +44,19 @@
 #include "config/iconv.h"
 #endif
 
-#include <unistd.h>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
-#include <ctype.h>
-#include <dirent.h>
-#include <locale.h>
-#include <langinfo.h>
+
 #ifdef HAVE_ICONV
 #include <iconv.h>
 #endif
+#include <math.h>
 #include <signal.h>
 #include <stdarg.h>
-#include <math.h>
-#include <sys/time.h>
 
 #if defined(__sun__) || defined(__CYGWIN__)
 /* TIOCGWINSZ */
@@ -88,9 +83,8 @@ char *lib_ext_filename = NULL;
 char *play_queue_filename = NULL;
 char *play_queue_ext_filename = NULL;
 
-bool gUsingUtf8 = false;
-
-extern char*        gCharset;
+bool                        gUsingUtf8 = false;
+extern char*                gCharset;
 
 /* ------------------------------------------------------------------------- */
 
@@ -858,7 +852,7 @@ static void print_help(struct window *win, int row, struct iter *iter)
 	int active = 1;
 	char buf[OPTION_MAX_SIZE];
 	const struct help_entry *e = iter_to_help_entry(iter);
-	const struct cmus_opt *opt;
+	const Option *opt;
 
 	window_get_sel(win, &sel);
 	selected = iters_equal(iter, &sel);
@@ -958,8 +952,7 @@ static void print_pl_list(struct window *win, int row, struct iter *iter)
 	format_str(&print_buffer, prefix, prefix_w);
 
 	if (tree_win_w > prefix_w)
-		format_str(&print_buffer, info.name,
-				tree_win_w - prefix_w);
+		format_str(&print_buffer, info.name, tree_win_w - prefix_w);
 
 	dump_print_buffer(row + 1, 0);
 }
@@ -1057,9 +1050,9 @@ static void update_browser_window(void)
 
 	if (gUsingUtf8) {
 		/* already UTF-8 */
-		dirname = browser_dir;
+		dirname = gBrowserDir;
 	} else {
-		utf8_encode_to_buf(browser_dir);
+		utf8_encode_to_buf(gBrowserDir);
 		dirname = conv_buffer;
 	}
 	gbuf_add_str(&title, "Browser - ");
@@ -2303,22 +2296,20 @@ static void init_curses(void)
 
 static void init_all(void)
 {
-	gMainThread = pthread_self();
-	gm_track_request_init();
+	gMainThread = pthread_self ();
+	gm_track_request_init ();
 
 	server_init(gSocketPath);
 
-	/* does not select output plugin */
-	player_init();
-
-	/* plugins have been loaded, so we know what plugin options are available */
+	player_init();                      // 创建播放线程 和 音乐文件解析线程
 	options_add();
 
 	lib_init();
 	searchable = tree_searchable;
 	gm_init();
 	pl_init();
-	browser_init();
+
+	browser_init();                     // 从磁盘文件夹读取音乐文件
 	filters_init();
 	help_init();
 	cmdline_init();
@@ -2426,7 +2417,7 @@ static const char *usage =
 "Use cmus-remote to control cmus from command line.\n"
 "Report bugs to <cmus-devel@lists.sourceforge.net>.\n";
 
-int curses_main(int argc, char* argv[])
+int curses_main (int argc, char* argv[])
 {
     bool listPlugins = 0;
 	++argv;
@@ -2472,11 +2463,13 @@ int curses_main(int argc, char* argv[])
 	if (listPlugins) {
 		ip_dump_plugins();
 		op_dump_plugins();
+
 		return 0;
 	}
 
     LOG_DEBUG ("Load plugin ok!");
-	init_all();
+
+    init_all();
 	main_loop();
 	exit_all();
 	spawn_status_program_inner("exiting", NULL);

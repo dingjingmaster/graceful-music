@@ -423,7 +423,7 @@ static void cmd_set(char *arg)
 		update_titleline();
 		update_statusline();
 	} else {
-		struct cmus_opt *opt;
+		Option *opt;
 		char buf[OPTION_MAX_SIZE];
 
 		/* support "set <option>?" */
@@ -441,7 +441,7 @@ static void cmd_set(char *arg)
 
 static void cmd_toggle(char *arg)
 {
-	struct cmus_opt *opt = option_find(arg);
+	Option *opt = option_find(arg);
 
 	if (opt == NULL)
 		return;
@@ -2448,48 +2448,49 @@ static void expand_fset(const char *str)
 
 static void expand_options(const char *str)
 {
-	struct cmus_opt *opt;
 	int len;
 	char **tails, *sep;
 
 	/* tabexp is resetted */
-	len = strlen(str);
+	len = (int) strlen (str);
 	sep = strchr(str, '=');
-	if (len > 1 && sep) {
+    if (len > 1 && sep) {
 		/* expand value */
 		char *var = xstrndup(str, sep - str);
 
-		list_for_each_entry(opt, &option_head, node) {
-			if (strcmp(var, opt->name) == 0) {
-				if (str[len - 1] == '=') {
-					char buf[OPTION_MAX_SIZE];
+        for (GList* l = gOptionHeader; l; l = l->next) {
+            Option* opt = (Option*) l->data;
+            if (0 == g_strcmp0 (var, opt->name)) {
+                if (str[len - 1] == '=') {
+                    char buf[OPTION_MAX_SIZE] = {0};
+                    tails = g_malloc0 (sizeof (char*));
+                    opt->get (opt->data, buf, OPTION_MAX_SIZE);
+                    tails[0] = g_strdup (buf);
+                    tabexp.head = g_strdup (str);
+                    tabexp.tails = tails;
+                    tabexp.count = 1;
+                }
+                else if (OPT_PROGRAM_PATH & opt->flags) {
+                    expand_program_paths_option (sep + 1, var);
+                }
+                break;
+            }
+        }
 
-					tails = xnew(char *, 1);
-
-					buf[0] = 0;
-					opt->get(opt->data, buf, OPTION_MAX_SIZE);
-					tails[0] = xstrdup(buf);
-
-					tabexp.head = xstrdup(str);
-					tabexp.tails = tails;
-					tabexp.count = 1;
-				} else if (opt->flags & OPT_PROGRAM_PATH) {
-					expand_program_paths_option(sep + 1, var);
-				}
-				break;
-			}
-		}
 		free(var);
-	} else {
+	}
+    else {
 		/* expand variable */
-		int pos;
+		int pos = 0;
 
-		tails = xnew(char *, nr_options);
-		pos = 0;
-		list_for_each_entry(opt, &option_head, node) {
-			if (strncmp(str, opt->name, len) == 0)
-				tails[pos++] = xstrdup(opt->name + len);
-		}
+		tails = g_malloc0 (sizeof (char*) * gOptionsNum);
+        for (GList* l = gOptionHeader; l; l = l->next) {
+            Option* opt = (Option*) l->data;
+            if (0 == strncmp (str, opt->name, len)) {
+                tails[pos++] = g_strdup (opt->name + len);
+            }
+        }
+
 		if (pos > 0) {
 			if (pos == 1) {
 				/* only one variable matches, add '=' */
@@ -2510,24 +2511,28 @@ static void expand_options(const char *str)
 
 static void expand_toptions(const char *str)
 {
-	struct cmus_opt *opt;
-	int len, pos;
+	Option *opt;
+	int pos = 0;
 	char **tails;
 
-	tails = xnew(char *, nr_options);
-	len = strlen(str);
-	pos = 0;
-	list_for_each_entry(opt, &option_head, node) {
-		if (opt->toggle == NULL)
-			continue;
-		if (strncmp(str, opt->name, len) == 0)
-			tails[pos++] = xstrdup(opt->name + len);
-	}
-	if (pos > 0) {
+	tails = g_malloc0 (sizeof (char*) * gOptionsNum);
+	int len = (int) strlen (str);
+    for (GList* l = gOptionHeader; l; l = l->next) {
+        opt = l->data;
+        if (NULL == opt->toggle) {
+            continue;
+        }
+        if (0 == strncmp (str, opt->name, len)) {
+            tails[pos++] = g_strdup (opt->name + len);
+        }
+    }
+
+    if (pos > 0) {
 		tabexp.head = xstrdup(str);
 		tabexp.tails = tails;
 		tabexp.count = pos;
-	} else {
+	}
+    else {
 		free(tails);
 	}
 }

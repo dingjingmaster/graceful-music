@@ -15,7 +15,7 @@ struct pl_list_info {
 };
 
 extern struct window *pl_list_win;
-extern struct editable_shared pl_editable_shared;
+extern EditableShared 			pl_editable_shared;
 
 void pl_init(void);
 void pl_exit(void);

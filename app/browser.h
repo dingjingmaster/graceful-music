@@ -18,7 +18,7 @@ static inline struct browser_entry *iter_to_browser_entry(struct iter *iter)
 }
 
 extern struct window *browser_win;
-extern char *browser_dir;
+extern char*                    gBrowserDir;            // 歌曲文件存放目录。TODO:// 允许配置多个目录
 extern struct searchable *browser_searchable;
 
 void browser_init(void);

@@ -10,16 +10,18 @@
 
 struct editable;
 
+typedef struct _EditableShared      EditableShared;
+
 typedef void (*editable_free_track)(struct editable *e, struct list_head *head);
 
-struct editable_shared {
-	struct editable *owner;
-
-	struct window *win;
-	sort_key_t *sort_keys;
-	char sort_str[128];
-	editable_free_track free_track;
-	struct searchable *searchable;
+struct _EditableShared
+{
+	struct editable*                owner;
+	struct window*                  win;
+	sort_key_t*                     sort_keys;
+	char                            sort_str[128];
+	editable_free_track             free_track;
+	struct searchable*              searchable;
 };
 
 struct editable {
@@ -28,15 +30,15 @@ struct editable {
 	unsigned int nr_tracks;
 	unsigned int nr_marked;
 	unsigned int total_time;
-	struct editable_shared *shared;
+	EditableShared *shared;
 };
 
-void editable_shared_init(struct editable_shared *shared,
+void editable_shared_init(EditableShared *shared,
 		editable_free_track free_track);
-void editable_shared_set_sort_keys(struct editable_shared *shared,
+void editable_shared_set_sort_keys(EditableShared *shared,
 		sort_key_t *keys);
 
-void editable_init(struct editable *e, struct editable_shared *shared,
+void editable_init(struct editable *e, EditableShared *shared,
 		int take_ownership);
 void editable_take_ownership(struct editable *e);
 void editable_add(struct editable *e, struct simple_track *track);

@@ -13,6 +13,7 @@
 #include "ui_curses.h"
 #include "mixer-interface.h"
 #include "plugins/output-interface.h"
+#include "options.h"
 
 #include <stdio.h>
 #include <dlfcn.h>
@@ -443,22 +444,23 @@ void op_add_options(void)
 	OutputPlugin *o;
 	const OutputPluginOpt* opo;
 	const MixerPluginOpt* mpo;
-	char key[64];
 
-//	list_for_each_entry(o, &op_head, node) {
-//		for (opo = o->pcm_options; opo->name; opo++) {
-//			snprintf(key, sizeof(key), "dsp.%s.%s", o->name,
-//					opo->name);
-//			option_add(xstrdup(key), opo, get_dsp_option,
-//					set_dsp_option, NULL, 0);
-//		}
-//		for (mpo = o->mixerOptions; mpo && mpo->name; mpo++) {
-//			snprintf(key, sizeof(key), "mixer.%s.%s", o->name,
-//					mpo->name);
-//			option_add(xstrdup(key), mpo, get_mixer_option,
-//					set_mixer_option, NULL, 0);
-//		}
-//	}
+	for (GList* l = gOutputPlugins; l; l = l->next) {
+		OutputPlugin* o = l->data;
+		const OutputPluginOpt* opo = o->pcmOptions;
+		const MixerPluginOpt* mpo = o->pcmOptions;
+		if (opo && opo->name) {
+			char key[64] = {0};
+			snprintf(key, sizeof(key), "dsp.%s.%s", o->name, opo->name);
+			option_add (g_strdup(key), opo, get_dsp_option, set_dsp_option, NULL, 0);
+		}
+
+		if (mpo && mpo->name) {
+			char key[64] = {0};
+			snprintf(key, sizeof(key), "mixer.%s.%s", o->name, mpo->name);
+			option_add (g_strdup(key), mpo, get_mixer_option, set_mixer_option, NULL, 0);
+		}
+	}
 }
 
 char *op_get_error_msg(int rc, const char *arg)
