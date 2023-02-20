@@ -4,7 +4,7 @@
 #include "search_mode.h"
 #include "cmdline.h"
 #include "options.h"
-#include "ui_curses.h"
+#include "curses-main.h"
 #include "history.h"
 #include "tabexp.h"
 #include "tabexp_file.h"
@@ -142,8 +142,8 @@ void view_load(int view, char *arg)
 		worker_remove_jobs_by_type(JOB_TYPE_LIB);
 		editable_clear(&lib_editable);
 		gm_add(lib_add_track, name, FILE_TYPE_PL, JOB_TYPE_LIB, 0, NULL);
-		free(lib_filename);
-		lib_filename = name;
+		free(gLibFilename);
+		gLibFilename = name;
 		break;
 	default:
 		info_msg(":load only works in views 1-2");
@@ -194,7 +194,7 @@ void view_save(int view, char *arg, int to_stdout, int filtered, int extended)
 	case SORTED_VIEW:
 		if (worker_has_job_by_type(JOB_TYPE_LIB))
 			goto worker_running;
-		dest = extended ? &lib_ext_filename : &lib_filename;
+		dest = extended ? &gLibExtFilename : &gLibFilename;
 		do_save(lib_for_each_ti, arg, dest, save_ti);
 		break;
 	case PLAYLIST_VIEW:
@@ -206,7 +206,7 @@ void view_save(int view, char *arg, int to_stdout, int filtered, int extended)
 	case QUEUE_VIEW:
 		if (worker_has_job_by_type(JOB_TYPE_QUEUE))
 			goto worker_running;
-		dest = extended ? &play_queue_ext_filename : &play_queue_filename;
+		dest = extended ? &gPlayQueueExtFilename : &gPlayQueueFilename;
 		do_save(play_queue_for_each, arg, dest, save_ti);
 		break;
 	default:
@@ -315,13 +315,13 @@ static int flag_to_view(int flag)
 	case 'Q':
 		return QUEUE_VIEW;
 	default:
-		return cur_view;
+		return gCurView;
 	}
 }
 
 struct window *current_win(void)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		return lib_cur_win;
 	case SORTED_VIEW:
@@ -412,10 +412,10 @@ static void cmd_set(char *arg)
 	if (value) {
 		option_set(arg, value);
 		help_win->changed = 1;
-		if (cur_view == TREE_VIEW) {
+		if (gCurView == TREE_VIEW) {
 			lib_track_win->changed = 1;
 			lib_tree_win->changed = 1;
-		} else if (cur_view == PLAYLIST_VIEW) {
+		} else if (gCurView == PLAYLIST_VIEW) {
 			pl_mark_for_redraw();
 		} else {
 			current_win()->changed = 1;
@@ -452,10 +452,10 @@ static void cmd_toggle(char *arg)
 	}
 	opt->toggle(opt->data);
 	help_win->changed = 1;
-	if (cur_view == TREE_VIEW) {
+	if (gCurView == TREE_VIEW) {
 		lib_track_win->changed = 1;
 		lib_tree_win->changed = 1;
-	} else if (cur_view == PLAYLIST_VIEW) {
+	} else if (gCurView == PLAYLIST_VIEW) {
 		pl_mark_for_redraw();
 	} else {
 		current_win()->changed = 1;
@@ -562,7 +562,7 @@ static void cmd_help(char *arg)
 
 static void cmd_invert(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case SORTED_VIEW:
 		editable_invert_marks(&lib_editable);
 		break;
@@ -579,7 +579,7 @@ static void cmd_invert(char *arg)
 
 static void cmd_mark(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case SORTED_VIEW:
 		editable_mark(&lib_editable, arg);
 		break;
@@ -596,7 +596,7 @@ static void cmd_mark(char *arg)
 
 static void cmd_unmark(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case SORTED_VIEW:
 		editable_unmark(&lib_editable);
 		break;
@@ -668,7 +668,7 @@ static void cmd_bind(char *arg)
 		goto err;
 
 	key_bind(arg, key, func, flag == 'f');
-	if (cur_view == HELP_VIEW)
+	if (gCurView == HELP_VIEW)
 		window_changed(help_win);
 	return;
 err:
@@ -727,7 +727,7 @@ err:
 static void cmd_quit(char *arg)
 {
 	int flag = parse_flags((const char **)&arg, "i");
-	enum ui_query_answer answer;
+	UIQueryAnswer answer;
 	if (!worker_has_job_by_type(JOB_TYPE_ANY)) {
 		if (flag != 'i' || yes_no_query("Quit cmus? [y/N]") != UI_QUERY_ANSWER_NO)
 			gRunning = 0;
@@ -975,7 +975,7 @@ static void cmd_run(char *arg)
 	int ac, argc, i, run, files_idx = -1;
 	struct track_info_selection sel = { .tis = NULL };
 
-	if (cur_view > QUEUE_VIEW) {
+	if (gCurView > QUEUE_VIEW) {
 		info_msg("Command execution is supported only in views 1-4");
 		return;
 	}
@@ -986,7 +986,7 @@ static void cmd_run(char *arg)
 	}
 
 	/* collect selected files (struct track_info) */
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		_tree_for_each_sel(add_ti, &sel, 0);
 		break;
@@ -1052,7 +1052,7 @@ static void cmd_run(char *arg)
 			if (WIFSIGNALED(status))
 				error_msg("%s received signal %d", argv[0], WTERMSIG(status));
 
-			switch (cur_view) {
+			switch (gCurView) {
 			case TREE_VIEW:
 			case SORTED_VIEW:
 				/* this must be done before sel.tis are unreffed */
@@ -1111,7 +1111,7 @@ static void cmd_echo(char *arg)
 		return;
 	}
 
-	if (cur_view > QUEUE_VIEW) {
+	if (gCurView > QUEUE_VIEW) {
 		info_msg("echo with {} in its arguments is supported only in views 1-4");
 		return;
 	}
@@ -1122,7 +1122,7 @@ static void cmd_echo(char *arg)
 	/* get only the first selected track */
 	sel_ti = NULL;
 
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		_tree_for_each_sel(get_one_ti, &sel_ti, 0);
 		break;
@@ -1249,26 +1249,26 @@ err:
 
 static void cmd_prev_view(char *arg)
 {
-	if (prev_view >= 0) {
-		set_view(prev_view);
+	if (gPrevView >= 0) {
+		set_view(gPrevView);
 	}
 }
 
 static void cmd_left_view(char *arg)
 {
-	if (cur_view == TREE_VIEW) {
+	if (gCurView == TREE_VIEW) {
 		set_view(HELP_VIEW);
 	} else {
-		set_view(cur_view - 1);
+		set_view(gCurView - 1);
 	}
 }
 
 static void cmd_right_view(char *arg)
 {
-	if (cur_view == HELP_VIEW) {
+	if (gCurView == HELP_VIEW) {
 		set_view(TREE_VIEW);
 	} else {
-		set_view(cur_view + 1);
+		set_view(gCurView + 1);
 	}
 }
 
@@ -1279,7 +1279,7 @@ static void cmd_pl_create(char *arg)
 
 static void cmd_pl_export(char *arg)
 {
-	if (cur_view == PLAYLIST_VIEW)
+	if (gCurView == PLAYLIST_VIEW)
 		pl_export_selected_pl(arg);
 	else
 		info_msg(":pl-export only works in view 3");
@@ -1304,7 +1304,7 @@ static void cmd_pl_import(char *arg)
 
 	if (arg)
 		name = view_load_prepare(arg);
-	else if (cur_view == BROWSER_VIEW)
+	else if (gCurView == BROWSER_VIEW)
 		name = get_browser_add_file();
 	else
 		error_msg("not enough arguments");
@@ -1317,7 +1317,7 @@ static void cmd_pl_import(char *arg)
 
 static void cmd_pl_rename(char *arg)
 {
-	if (cur_view == PLAYLIST_VIEW)
+	if (gCurView == PLAYLIST_VIEW)
 		pl_rename_selected_pl(arg);
 	else
 		info_msg(":pl-rename only works in view 3");
@@ -1332,7 +1332,7 @@ static void cmd_view(char *arg)
 {
 	int view;
 
-	if (parse_enum(arg, 1, NR_VIEWS, view_names, &view) && (view - 1) != cur_view) {
+	if (parse_enum(arg, 1, NR_VIEWS, view_names, &view) && (view - 1) != gCurView) {
 		set_view(view - 1);
 	}
 }
@@ -1409,7 +1409,7 @@ static void cmd_raise_vte(char *arg)
 
 static void cmd_rand(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		break;
 	case SORTED_VIEW:
@@ -1427,7 +1427,7 @@ static void cmd_rand(char *arg)
 static void cmd_search_next(char *arg)
 {
 	if (search_str) {
-		if (!search_next(searchable, search_str, gSearchDirection))
+		if (!search_next(gSearchable, search_str, gSearchDirection))
 			search_not_found();
 	}
 }
@@ -1435,7 +1435,7 @@ static void cmd_search_next(char *arg)
 static void cmd_search_prev(char *arg)
 {
 	if (search_str) {
-		if (!search_next(searchable, search_str, !gSearchDirection))
+		if (!search_next(gSearchable, search_str, !gSearchDirection))
 			search_not_found();
 	}
 }
@@ -1506,13 +1506,13 @@ static void cmd_win_add_l(char *arg)
 	if (flag == -1)
 		return;
 
-	if (cur_view == TREE_VIEW || cur_view == SORTED_VIEW)
+	if (gCurView == TREE_VIEW || gCurView == SORTED_VIEW)
 		return;
 
-	if (cur_view <= QUEUE_VIEW) {
+	if (gCurView <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = { lib_add_track };
-		view_for_each_sel[cur_view](wrapper_cb, &add, 0, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
+		view_for_each_sel[gCurView](wrapper_cb, &add, 0, flag != 'n');
+	} else if (gCurView == BROWSER_VIEW) {
 		add_from_browser(lib_add_track, JOB_TYPE_LIB, flag != 'n');
 	}
 }
@@ -1523,13 +1523,13 @@ static void cmd_win_add_p(char *arg)
 	if (flag == -1)
 		return;
 
-	if (cur_view == PLAYLIST_VIEW && pl_visible_is_marked())
+	if (gCurView == PLAYLIST_VIEW && pl_visible_is_marked())
 		return;
 
-	if (cur_view <= QUEUE_VIEW) {
+	if (gCurView <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = { pl_add_track_to_marked_pl2 };
-		view_for_each_sel[cur_view](wrapper_cb, &add, 0, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
+		view_for_each_sel[gCurView](wrapper_cb, &add, 0, flag != 'n');
+	} else if (gCurView == BROWSER_VIEW) {
 		char *sel = get_browser_add_file();
 		if (sel) {
 			if (pl_add_file_to_marked_pl(sel) && flag != 'n')
@@ -1545,13 +1545,13 @@ static void cmd_win_add_Q(char *arg)
 	if (flag == -1)
 		return;
 
-	if (cur_view == QUEUE_VIEW)
+	if (gCurView == QUEUE_VIEW)
 		return;
 
-	if (cur_view <= QUEUE_VIEW) {
+	if (gCurView <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = { play_queue_prepend };
-		view_for_each_sel[cur_view](wrapper_cb, &add, 1, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
+		view_for_each_sel[gCurView](wrapper_cb, &add, 1, flag != 'n');
+	} else if (gCurView == BROWSER_VIEW) {
 		add_from_browser(play_queue_prepend, JOB_TYPE_QUEUE, flag != 'n');
 	}
 }
@@ -1562,13 +1562,13 @@ static void cmd_win_add_q(char *arg)
 	if (flag == -1)
 		return;
 
-	if (cur_view == QUEUE_VIEW)
+	if (gCurView == QUEUE_VIEW)
 		return;
 
-	if (cur_view <= QUEUE_VIEW) {
+	if (gCurView <= QUEUE_VIEW) {
 		struct wrapper_cb_data add = { play_queue_append };
-		view_for_each_sel[cur_view](wrapper_cb, &add, 0, flag != 'n');
-	} else if (cur_view == BROWSER_VIEW) {
+		view_for_each_sel[gCurView](wrapper_cb, &add, 0, flag != 'n');
+	} else if (gCurView == BROWSER_VIEW) {
 		add_from_browser(play_queue_append, JOB_TYPE_QUEUE, flag != 'n');
 	}
 }
@@ -1579,7 +1579,7 @@ static void cmd_win_activate(char *arg)
 	struct shuffle_info *previous = NULL, *next = NULL;
 	struct rb_root *shuffle_root = NULL;
 
-	if (cur_view == TREE_VIEW || cur_view == SORTED_VIEW) {
+	if (gCurView == TREE_VIEW || gCurView == SORTED_VIEW) {
 		if (shuffle == SHUFFLE_TRACKS) {
 			if (lib_cur_track)
 				previous = &lib_cur_track->simple_track.shuffle_info;
@@ -1591,7 +1591,7 @@ static void cmd_win_activate(char *arg)
 		}
 	}
 
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		info = tree_activate_selected();
 		if (shuffle == SHUFFLE_TRACKS)
@@ -1626,9 +1626,9 @@ static void cmd_win_activate(char *arg)
 		if (shuffle && next)
 			shuffle_insert(shuffle_root, previous, next);
 		/* update lib/pl mode */
-		if (cur_view < 2)
+		if (gCurView < 2)
 			play_library = 1;
-		if (cur_view == 2)
+		if (gCurView == 2)
 			play_library = 0;
 
 		player_play_file(info);
@@ -1637,7 +1637,7 @@ static void cmd_win_activate(char *arg)
 
 static void cmd_win_mv_after(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case SORTED_VIEW:
 		editable_move_after(&lib_editable);
 		break;
@@ -1652,7 +1652,7 @@ static void cmd_win_mv_after(char *arg)
 
 static void cmd_win_mv_before(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case SORTED_VIEW:
 		editable_move_before(&lib_editable);
 		break;
@@ -1667,7 +1667,7 @@ static void cmd_win_mv_before(char *arg)
 
 static void cmd_win_remove(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		tree_remove_sel();
 		break;
@@ -1694,7 +1694,7 @@ static void cmd_win_remove(char *arg)
 
 static void cmd_win_sel_cur(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		tree_sel_current(auto_expand_albums_selcur);
 		break;
@@ -1709,7 +1709,7 @@ static void cmd_win_sel_cur(char *arg)
 
 static void cmd_win_toggle(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		tree_toggle_expand_artist();
 		break;
@@ -1763,9 +1763,9 @@ static void cmd_win_down(char *arg)
 
 static void cmd_win_next(char *arg)
 {
-	if (cur_view == TREE_VIEW)
+	if (gCurView == TREE_VIEW)
 		tree_toggle_active_window();
-	else if (cur_view == PLAYLIST_VIEW)
+	else if (gCurView == PLAYLIST_VIEW)
 		pl_win_next();
 }
 
@@ -1809,10 +1809,10 @@ static void cmd_win_update_cache(char *arg)
 	struct track_info_selection sel = { .tis = NULL };
 	int flag = parse_flags((const char **)&arg, "f");
 
-	if (cur_view != TREE_VIEW && cur_view != SORTED_VIEW)
+	if (gCurView != TREE_VIEW && gCurView != SORTED_VIEW)
 		return;
 
-	view_for_each_sel[cur_view](add_ti, &sel, 0, 1);
+	view_for_each_sel[gCurView](add_ti, &sel, 0, 1);
 	if (sel.tis_nr == 0)
 		return;
 	sel.tis[sel.tis_nr] = NULL;
@@ -1841,7 +1841,7 @@ static void cmd_win_up(char *arg)
 
 static void cmd_win_update(char *arg)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 	case SORTED_VIEW:
 		gm_update_lib();
@@ -2959,7 +2959,7 @@ static void backspace(void)
 	if (cmdline.clen > 0) {
 		cmdline_backspace();
 	} else {
-		input_mode = NORMAL_MODE;
+		gInputMode = NORMAL_MODE;
 	}
 }
 
@@ -2990,7 +2990,7 @@ void command_mode_ch(uchar ch)
             history_add_line (&cmd_history, cmdline.line);
             cmdline_clear ();
         }
-        input_mode = NORMAL_MODE;
+        gInputMode = NORMAL_MODE;
         break;
     }
 	case 0x10: // ^P
@@ -3005,7 +3005,7 @@ void command_mode_ch(uchar ch)
             history_add_line (&cmd_history, cmdline.line);
             cmdline_clear ();
         }
-        input_mode = NORMAL_MODE;
+        gInputMode = NORMAL_MODE;
         break;
     }
 	case 0x0B:
@@ -3124,7 +3124,7 @@ void command_mode_mouse(MEVENT *event)
 				history_add_line(&cmd_history, cmdline.line);
 				cmdline_clear();
 			}
-			input_mode = NORMAL_MODE;
+			gInputMode = NORMAL_MODE;
 			normal_mode_mouse(event);
 			return;
 		}

@@ -5,7 +5,7 @@
 
 #include "log.h"
 #include "global.h"
-#include "ui_curses.h"
+#include "curses-main.h"
 
 
 char*               gLogPath = NULL;

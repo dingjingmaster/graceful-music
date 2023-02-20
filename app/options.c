@@ -4,7 +4,6 @@
 #include "xmalloc.h"
 #include "player.h"
 #include "buffer.h"
-#include "ui_curses.h"
 #include "misc.h"
 #include "lib.h"
 #include "pl.h"
@@ -23,6 +22,7 @@
 #include "discid.h"
 #include "mpris.h"
 #include "global.h"
+#include "curses-main.h"
 #include "graceful-music.h"
 
 #include <stdio.h>
@@ -370,7 +370,7 @@ static void get_output_plugin(void *data, char *buf, size_t size)
 
 static void set_output_plugin(void *data, const char *buf)
 {
-	if (ui_initialized) {
+	if (gUIInitialized) {
 		if (!soft_vol)
 			mixer_close();
 		player_set_op(buf);
@@ -1774,7 +1774,7 @@ void resume_load(void)
 			error_msg("loading %s: %s", filename, strerror(errno));
 		return;
 	}
-	if (resume.view >= 0 && resume.view != cur_view)
+	if (resume.view >= 0 && resume.view != gCurView)
 		set_view(resume.view);
 	if (resume.lib_filename) {
 		cache_lock();
@@ -1848,7 +1848,7 @@ void resume_exit(void)
 		ti = lib_get_cur_stored_track();
 	if (ti)
 		fprintf(f, "lib_file %s\n", escape(ti->filename));
-	fprintf(f, "view %s\n", view_names[cur_view]);
+	fprintf(f, "view %s\n", view_names[gCurView]);
 	if (lib_live_filter)
 		fprintf(f, "live-filter %s\n", escape(lib_live_filter));
 	fprintf(f, "browser-dir %s\n", escape(gBrowserDir));

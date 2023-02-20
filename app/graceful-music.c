@@ -22,8 +22,8 @@
 #include "xmalloc.h"
 #include "locking.h"
 #include "load_dir.h"
-#include "ui_curses.h"
 #include "play_queue.h"
+#include "curses-main.h"
 #include "command_mode.h"
 
 #include <fcntl.h>

@@ -7,11 +7,11 @@
 #include "utils.h"
 #include "debug.h"
 #include "path.h"
-#include "ui_curses.h"
+#include "curses-main.h"
 
+#include <math.h>
 #include <string.h>
 #include <stdatomic.h>
-#include <math.h>
 
 struct track_info_priv {
 	struct track_info ti;

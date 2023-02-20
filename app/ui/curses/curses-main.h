@@ -4,6 +4,9 @@
 
 #ifndef GRACEFUL_MUSIC_CURSES_MAIN_H
 #define GRACEFUL_MUSIC_CURSES_MAIN_H
+#include "search.h"
+#include "format-print.h"
+
 #include <signal.h>
 #include <stdbool.h>
 
@@ -32,13 +35,41 @@ extern volatile sig_atomic_t        gRunning;
 extern char*                        gCharset;
 extern bool                         gUsingUtf8;
 
-extern struct searchable*           searchable;
+extern Searchable*                  gSearchable;
 
-extern char*                        lib_filename;
-extern char*                        lib_ext_filename;
-extern char*                        pl_filename;
-extern char*                        play_queue_filename;
-extern char*                        play_queue_ext_filename;
+extern char*                        gLibFilename;
+extern char*                        gLibExtFilename;
+extern char*                        gPlaylistFilename;
+extern char*                        gPlayQueueFilename;
+extern char*                        gPlayQueueExtFilename;
+
+
+int curses_main(int argc, char *argv[]);
+
+void update_title_line(void);
+void update_status_line(void);
+void update_filter_line(void);
+void update_full(void);
+void update_size(void);
+void update_colors(void);
+void info_msg(const char *format, ...);
+void error_msg(const char *format, ...);
+UIQueryAnswer yes_no_query(const char *format, ...);
+void search_not_found(void);
+void set_view(int view);
+void set_client_fd(int fd);
+int get_client_fd(void);
+void enter_search_mode(void);
+void enter_command_mode(void);
+void enter_search_backward_mode(void);
+
+int track_format_valid(const char *format);
+
+/* lock player_info ! */
+const char *get_stream_title(void);
+const FormatOption* get_global_format_options(void);
+
+int get_track_win_x (void);
 
 
 

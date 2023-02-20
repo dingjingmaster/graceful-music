@@ -6,7 +6,7 @@
 #include "rbtree.h"
 #include "debug.h"
 #include "utils.h"
-#include "ui_curses.h" /* cur_view */
+#include "curses-main.h" /* gCurView */
 
 #include <pthread.h>
 #include <string.h>
@@ -670,7 +670,7 @@ void lib_set_add_filter(struct expr *expr)
 
 static struct tree_track *get_sel_track(void)
 {
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		return tree_get_selected();
 	case SORTED_VIEW:
@@ -683,7 +683,7 @@ static void set_sel_track(struct tree_track *tt)
 {
 	struct iter iter;
 
-	switch (cur_view) {
+	switch (gCurView) {
 	case TREE_VIEW:
 		tree_sel_track(tt, auto_expand_albums_selcur);
 		break;

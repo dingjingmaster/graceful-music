@@ -7,12 +7,13 @@
 #include "list.h"
 #include "job.h"
 #include "misc.h"
-#include "ui_curses.h"
 #include "xstrjoin.h"
 #include "worker.h"
 #include "uchar.h"
-#include "mergesort.h"
 #include "global.h"
+#include "search.h"
+#include "mergesort.h"
+#include "curses-main.h"
 
 #include <unistd.h>
 #include <stdio.h>

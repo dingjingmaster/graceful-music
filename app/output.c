@@ -8,12 +8,12 @@
 #include "debug.h"
 #include "global.h"
 #include "xmalloc.h"
+#include "options.h"
 #include "xstrjoin.h"
 #include "interface.h"
-#include "ui_curses.h"
+#include "curses-main.h"
 #include "mixer-interface.h"
 #include "plugins/output-interface.h"
-#include "options.h"
 
 #include <stdio.h>
 #include <dlfcn.h>

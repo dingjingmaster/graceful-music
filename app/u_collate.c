@@ -1,9 +1,9 @@
 #include "u_collate.h"
 #include "uchar.h"
 #include "xmalloc.h"
-#include "ui_curses.h" /* using_utf8, charset */
 #include "convert.h"
 #include "global.h"
+#include "curses-main.h" /* using_utf8, charset */
 
 #include <stdlib.h>
 #include <string.h>

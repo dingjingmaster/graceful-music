@@ -7,7 +7,7 @@
 #include "../global.h"
 #include "../convert.h"
 #include "../options.h"
-#include "../ui_curses.h"
+#include "curses-main.h"
 
 struct _Searchable
 {
@@ -132,8 +132,10 @@ static int do_u_search (Searchable* s, GList* iter, const char* text, SearchDire
             }
             return 1;
         }
-        if (!advance(s, iter, dir, &wrapped) || iters_equal(iter, &start))
+
+        if (!advance(s, iter, dir, &wrapped) || 0 == memcmp (iter, &start, sizeof (GList))) {
             return 0;
+        }
     }
 }
 

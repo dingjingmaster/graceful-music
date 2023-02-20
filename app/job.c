@@ -6,17 +6,17 @@
 #include "debug.h"
 #include "load_dir.h"
 #include "path.h"
-#include "editable.h"
 #include "pl.h"
-#include "play_queue.h"
 #include "lib.h"
 #include "file.h"
 #include "cache.h"
 #include "player.h"
 #include "discid.h"
 #include "xstrjoin.h"
-#include "ui_curses.h"
+#include "editable.h"
 #include "cue_utils.h"
+#include "play_queue.h"
+#include "curses-main.h"
 
 #include <string.h>
 #include <unistd.h>

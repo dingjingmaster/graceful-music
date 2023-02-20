@@ -1,13 +1,13 @@
 #include "help.h"
+#include "misc.h"
+#include "keys.h"
 #include "window.h"
 #include "search.h"
-#include "misc.h"
 #include "xmalloc.h"
-#include "keys.h"
-#include "command_mode.h"
-#include "ui_curses.h"
 #include "options.h"
 #include "cmdline.h"
+#include "curses-main.h"
+#include "command_mode.h"
 
 #include <stdio.h>
 

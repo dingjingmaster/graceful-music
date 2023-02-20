@@ -7,8 +7,8 @@
 #include "utils.h"
 #include "debug.h"
 #include "list.h"
-#include "ui_curses.h" /* gUsingUtf8, charset */
 #include "convert.h"
+#include "curses-main.h" /* gUsingUtf8, charset */
 
 #include <stdio.h>
 #include <stdlib.h>

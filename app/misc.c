@@ -7,7 +7,7 @@
 #include "global.h"
 #include "xmalloc.h"
 #include "xstrjoin.h"
-#include "ui_curses.h"
+#include "curses-main.h"
 
 
 #include <string.h>

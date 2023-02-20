@@ -3,6 +3,8 @@ include(${CMAKE_SOURCE_DIR}/app/common/common.cmake)
 include(${CMAKE_SOURCE_DIR}/app/plugins/plugins.cmake)
 include(${CMAKE_SOURCE_DIR}/app/functions/functions.cmake)
 
+include_directories(${CMAKE_SOURCE_DIR}/app/)
+
 FILE(GLOB GM_SRC
         ape.h                       ape.c
         browser.h                   browser.c
@@ -20,7 +22,6 @@ FILE(GLOB GM_SRC
         editable.h                  editable.c
         expr.h                      expr.c
         filters.h                   filters.c
-        format_print.h              format_print.c
         gbuf.h                      gbuf.c
         glob.h                      glob.c
         help.h                      help.c
@@ -33,7 +34,7 @@ FILE(GLOB GM_SRC
         keyval.h                    keyval.c
         lib.h                       lib.c
         load_dir.h                  load_dir.c
-        locking.h.bak locking.c
+        locking.h                   locking.c
         mergesort.h                 mergesort.c
         misc.h                      misc.c
         options.h                   options.c
@@ -54,7 +55,6 @@ FILE(GLOB GM_SRC
         tree.c
         uchar.h                     uchar.c
         u_collate.h                 u_collate.c
-        ui_curses.h                 ui_curses.c
         window.h                    window.c
         worker.h                    worker.c
         xstrjoin.h                  xstrjoin.c

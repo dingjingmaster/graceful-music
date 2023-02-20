@@ -1,11 +1,11 @@
 #include "keys.h"
 #include "help.h"
-#include "ui_curses.h"
-#include "command_mode.h"
-#include "xmalloc.h"
-
 #include "window.h"
 #include "options.h"
+#include "xmalloc.h"
+#include "curses-main.h"
+#include "command_mode.h"
+
 #include "editable.h"
 #include "lib.h"
 #include "pl.h"
@@ -653,7 +653,7 @@ void normal_mode_ch(uchar ch)
 	enum key_context c;
 	const struct key *k;
 
-	c = view_to_context[cur_view];
+	c = view_to_context[gCurView];
 	k = ch_to_key(ch);
 
 	if (k == NULL) {
@@ -684,7 +684,7 @@ void normal_mode_ch(uchar ch)
 
 void normal_mode_key(int key)
 {
-	enum key_context c = view_to_context[cur_view];
+	enum key_context c = view_to_context[gCurView];
 	const struct key *k = keycode_to_key(key);
 
 	if (k == NULL) {
@@ -712,7 +712,7 @@ static const struct key *normal_mode_mouse_handle(MEVENT* event)
 		need_sel = 0;
 		type = KEY_M_TYPE_BAR;
 	} else {
-		if (cur_view == TREE_VIEW) {
+		if (gCurView == TREE_VIEW) {
 			if (event->x >= track_win_x)
 				win = lib_track_win;
 			else if (event->x < track_win_x - 1)
@@ -720,7 +720,7 @@ static const struct key *normal_mode_mouse_handle(MEVENT* event)
 			else
 				return NULL;
 			type = (lib_cur_win == win) ? KEY_M_TYPE_SEL : KEY_M_TYPE_NONE;
-		} else if (cur_view == PLAYLIST_VIEW) {
+		} else if (gCurView == PLAYLIST_VIEW) {
 			if (event->x >= track_win_x)
 				win = pl_editable_shared.win;
 			else if (event->x < track_win_x)
@@ -738,16 +738,16 @@ static const struct key *normal_mode_mouse_handle(MEVENT* event)
 			type = KEY_M_TYPE_NONE;
 			if (event->y < 1 || event->y >= LINES - 3)
 				return NULL;
-			if (cur_view == TREE_VIEW && lib_cur_win != win)
+			if (gCurView == TREE_VIEW && lib_cur_win != win)
 				tree_toggle_active_window();
-			if (cur_view == PLAYLIST_VIEW && pl_cursor_win() != win)
+			if (gCurView == PLAYLIST_VIEW && pl_cursor_win() != win)
 				pl_win_next();
 		} else {
 			if (event->y < 1 || event->y > window_get_nr_rows(win))
 				return NULL;
-			if (cur_view == TREE_VIEW && lib_cur_win != win)
+			if (gCurView == TREE_VIEW && lib_cur_win != win)
 				tree_toggle_active_window();
-			if (cur_view == PLAYLIST_VIEW && pl_cursor_win() != win)
+			if (gCurView == PLAYLIST_VIEW && pl_cursor_win() != win)
 				pl_win_next();
 			if (!window_get_top(win, &it) || !window_get_sel(win, &sel))
 				return NULL;
@@ -775,7 +775,7 @@ static const struct key *normal_mode_mouse_handle(MEVENT* event)
 
 void normal_mode_mouse(MEVENT *event)
 {
-	enum key_context c = view_to_context[cur_view];
+	enum key_context c = view_to_context[gCurView];
 	const struct key *k = normal_mode_mouse_handle(event);
 
 	if (k == NULL)

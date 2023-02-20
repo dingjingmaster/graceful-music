@@ -29,12 +29,12 @@
 #include "compiler.h"
 #include "debug.h"
 #include "gbuf.h"
-#include "ui_curses.h"
 #include "misc.h"
 #include "key-value.h"
 #include "convert.h"
-#include "format_print.h"
+#include "format-print.h"
 #include "log.h"
+#include "curses-main.h"
 
 #include <stdarg.h>
 #include <unistd.h>

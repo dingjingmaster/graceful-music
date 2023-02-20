@@ -6,8 +6,8 @@
 #include "player.h"
 #include "output.h"
 #include "options.h"
-#include "ui_curses.h"
 #include "track_info.h"
+#include "curses-main.h"
 #include "graceful-music.h"
 
 #define CK(v) \

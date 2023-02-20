@@ -18,8 +18,8 @@
 #include "xmalloc.h"
 #include "convert.h"
 #include "xstrjoin.h"
-#include "ui_curses.h"
 #include "mergesort.h"
+#include "curses-main.h"
 #include "graceful-music.h"
 
 #include <dlfcn.h>
@@ -894,7 +894,7 @@ static void set_ip_priority(void *data, const char *val)
         error_msg("non-negative integer expected");
         return;
     }
-    if (ui_initialized) {
+    if (gUIInitialized) {
         if (!warned) {
             static const char *msg =
                 "Metadata might become inconsistent "

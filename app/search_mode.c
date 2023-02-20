@@ -1,15 +1,15 @@
 #include "search_mode.h"
 #include "cmdline.h"
 #include "history.h"
-#include "ui_curses.h"
 #include "search.h"
 #include "xmalloc.h"
 #include "xstrjoin.h"
 #include "misc.h"
 #include "lib.h"
-#include "command_mode.h"
 #include "keys.h"
 #include "global.h"
+#include "curses-main.h"
+#include "command_mode.h"
 
 #include <ctype.h>
 
@@ -79,7 +79,7 @@ static void backspace(void)
 	if (cmdline.clen > 0) {
 		cmdline_backspace();
 	} else {
-		input_mode = NORMAL_MODE;
+		gInputMode = NORMAL_MODE;
 	}
 }
 
@@ -92,7 +92,7 @@ static void delete(void)
 	cmdline_delete_ch();
 	parse_line(&text, &search_restricted);
 	if (text[0])
-		search(searchable, text, gSearchDirection, 0);
+		search(gSearchable, text, gSearchDirection, 0);
 
 	/* restore old value */
 	search_restricted = restricted;
@@ -105,7 +105,7 @@ void search_text(const char *text, int restricted, int beginning)
 		if (search_str) {
 			/* use old search string */
 			search_restricted = restricted;
-			if (!search_next(searchable, search_str, gSearchDirection))
+			if (!search_next(gSearchable, search_str, gSearchDirection))
 				search_not_found();
 		}
 	} else {
@@ -116,7 +116,7 @@ void search_text(const char *text, int restricted, int beginning)
 
 		/* search not yet done if up or down arrow was pressed */
 		search_restricted = restricted;
-		if (!search(searchable, search_str, gSearchDirection, beginning))
+		if (!search(gSearchable, search_str, gSearchDirection, beginning))
 			search_not_found();
 	}
 }
@@ -150,13 +150,13 @@ void search_mode_ch(uchar ch)
 			history_add_line(&search_history, text);
 			cmdline_clear();
 		}
-		input_mode = NORMAL_MODE;
+		gInputMode = NORMAL_MODE;
 		break;
 	case 0x0A:
 		parse_line(&text, &restricted);
 		search_text(text, restricted, 0);
 		cmdline_clear();
-		input_mode = NORMAL_MODE;
+		gInputMode = NORMAL_MODE;
 		break;
 	case 0x0B:
 		cmdline_clear_end();
@@ -193,7 +193,7 @@ void search_mode_ch(uchar ch)
 
 			cmdline_insert_ch(ch);
 			parse_line(&text, &search_restricted);
-			search(searchable, text, gSearchDirection, beginning);
+			search(gSearchable, text, gSearchDirection, beginning);
 
 			/* restore old value */
 			search_restricted = restricted;
@@ -283,7 +283,7 @@ void search_mode_mouse(MEVENT *event)
 				history_add_line(&search_history, text);
 				cmdline_clear();
 			}
-			input_mode = NORMAL_MODE;
+			gInputMode = NORMAL_MODE;
 			normal_mode_mouse(event);
 			return;
 		}

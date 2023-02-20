@@ -7,7 +7,7 @@
 #include "options.h"
 #include "xmalloc.h"
 #include "load_dir.h"
-#include "ui_curses.h"
+#include "curses-main.h"
 #include "graceful-music.h"
 
 #include <errno.h>

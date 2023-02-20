@@ -7,7 +7,7 @@
 #include "lib.h"
 #include "misc.h"
 #include "file.h"
-#include "ui_curses.h"
+#include "curses-main.h"
 #include "xmalloc.h"
 
 #include <stdio.h>
@@ -337,14 +337,14 @@ static void do_filters_set_filter(const char *keyval)
 	struct list_head *item;
 
 	if (eq == NULL) {
-		if (ui_initialized)
+		if (gUIInitialized)
 			error_msg("invalid argument ('key=value' expected)");
 		return;
 	}
 	key = xstrndup(keyval, eq - keyval);
 	val = xstrdup(eq + 1);
 	if (!validate_filter_name(key)) {
-		if (ui_initialized)
+		if (gUIInitialized)
 			error_msg("invalid filter name (can only contain 'a-zA-Z0-9_-' characters)");
 		free(key);
 		free(val);
@@ -352,7 +352,7 @@ static void do_filters_set_filter(const char *keyval)
 	}
 	expr = expr_parse(val);
 	if (expr == NULL) {
-		if (ui_initialized)
+		if (gUIInitialized)
 			error_msg("error parsing filter %s: %s", val, expr_error());
 		free(key);
 		free(val);
@@ -378,7 +378,7 @@ static void do_filters_set_filter(const char *keyval)
 			struct iter iter;
 
 			new->sel_stat = e->sel_stat;
-			if (ui_initialized) {
+			if (gUIInitialized) {
 				filter_entry_to_iter(e, &iter);
 				window_row_vanishes(filters_win, &iter);
 			}
@@ -390,7 +390,7 @@ static void do_filters_set_filter(const char *keyval)
 	}
 	/* add before item */
 	list_add_tail(&new->node, item);
-	if (ui_initialized)
+	if (gUIInitialized)
 		window_changed(filters_win);
 }
 
