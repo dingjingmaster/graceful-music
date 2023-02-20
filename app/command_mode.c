@@ -420,8 +420,8 @@ static void cmd_set(char *arg)
 		} else {
 			current_win()->changed = 1;
 		}
-		update_titleline();
-		update_statusline();
+		update_title_line();
+		update_status_line();
 	} else {
 		Option *opt;
 		char buf[OPTION_MAX_SIZE];
@@ -460,8 +460,8 @@ static void cmd_toggle(char *arg)
 	} else {
 		current_win()->changed = 1;
 	}
-	update_titleline();
-	update_statusline();
+	update_title_line();
+	update_status_line();
 }
 
 static int get_number(char *str, char **end)
@@ -1204,7 +1204,7 @@ static void cmd_mute(char *arg)
 	} else {
 		mpris_volume_changed();
 	}
-	update_statusline();
+	update_status_line();
 }
 
 
@@ -1240,7 +1240,7 @@ static void cmd_vol(char *arg)
 	} else {
 		mpris_volume_changed();
 	}
-	update_statusline();
+	update_status_line();
 	return;
 err:
 	free_str_array(values);

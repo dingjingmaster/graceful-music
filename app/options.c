@@ -520,13 +520,13 @@ static void set_follow(void *data, const char *buf)
 {
 	if (!parse_bool(buf, &follow))
 		return;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_follow(void *data)
 {
 	follow ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_continue(void *data, char *buf, size_t size)
@@ -538,13 +538,13 @@ static void set_continue(void *data, const char *buf)
 {
 	if (!parse_bool(buf, &player_cont))
 		return;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_continue(void *data)
 {
 	player_cont ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_continue_album(void *data, char *buf, size_t size)
@@ -556,13 +556,13 @@ static void set_continue_album(void *data, const char *buf)
 {
 	if (!parse_bool(buf, &player_cont_album))
 		return;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_continue_album(void *data)
 {
 	player_cont_album ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_repeat_current(void *data, char *buf, size_t size)
@@ -577,14 +577,14 @@ static void set_repeat_current(void *data, const char *buf)
 		return;
 	if (old != player_repeat_current)
 		mpris_loop_status_changed();
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_repeat_current(void *data)
 {
 	player_repeat_current ^= 1;
 	mpris_loop_status_changed();
-	update_statusline();
+	update_status_line();
 }
 
 static void get_confirm_run(void *data, char *buf, size_t size)
@@ -615,13 +615,13 @@ static void set_play_library(void *data, const char *buf)
 {
 	if (!parse_bool(buf, &play_library))
 		return;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_play_library(void *data)
 {
 	play_library ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_play_sorted(void *data, char *buf, size_t size)
@@ -638,7 +638,7 @@ static void set_play_sorted(void *data, const char *buf)
 
 	play_sorted = tmp;
 
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_play_sorted(void *data)
@@ -650,7 +650,7 @@ static void toggle_play_sorted(void *data)
 		play_library = 1;
 	}
 
-	update_statusline();
+	update_status_line();
 }
 
 static void get_smart_artist_sort(void *data, char *buf, size_t size)
@@ -704,7 +704,7 @@ static void set_aaa_mode(void *data, const char *buf)
 		return;
 
 	aaa_mode = tmp;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_aaa_mode(void *data)
@@ -714,7 +714,7 @@ static void toggle_aaa_mode(void *data)
 
 	aaa_mode++;
 	aaa_mode %= 3;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_repeat(void *data, char *buf, size_t size)
@@ -729,7 +729,7 @@ static void set_repeat(void *data, const char *buf)
 		return;
 	if (!player_repeat_current && old != repeat)
 		mpris_loop_status_changed();
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_repeat(void *data)
@@ -737,7 +737,7 @@ static void toggle_repeat(void *data)
 	repeat ^= 1;
 	if (!player_repeat_current)
 		mpris_loop_status_changed();
-	update_statusline();
+	update_status_line();
 }
 
 static const char * const replaygain_names[] = {
@@ -935,13 +935,13 @@ static void get_show_current_bitrate(void *data, char *buf, size_t size)
 static void set_show_current_bitrate(void *data, const char *buf)
 {
 	if (parse_bool(buf, &show_current_bitrate))
-		update_statusline();
+		update_status_line();
 }
 
 static void toggle_show_current_bitrate(void *data)
 {
 	show_current_bitrate ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_show_playback_position(void *data, char *buf, size_t size)
@@ -953,13 +953,13 @@ static void set_show_playback_position(void *data, const char *buf)
 {
 	if (!parse_bool(buf, &show_playback_position))
 		return;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_show_playback_position(void *data)
 {
 	show_playback_position ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_show_remaining_time(void *data, char *buf, size_t size)
@@ -971,13 +971,13 @@ static void set_show_remaining_time(void *data, const char *buf)
 {
 	if (!parse_bool(buf, &show_remaining_time))
 		return;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_show_remaining_time(void *data)
 {
 	show_remaining_time ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_set_term_title(void *data, char *buf, size_t size)
@@ -1020,7 +1020,7 @@ static void set_shuffle(void *data, const char *buf)
 		mpris_shuffle_changed();
 
 	shuffle = tmp;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_shuffle(void *data)
@@ -1032,7 +1032,7 @@ static void toggle_shuffle(void *data)
 	if (!play_library && shuffle == SHUFFLE_ALBUMS)
 		shuffle = SHUFFLE_OFF;
 
-	update_statusline();
+	update_status_line();
 }
 
 static void get_softvol(void *data, char *buf, size_t size)
@@ -1047,7 +1047,7 @@ static void do_set_softvol(int soft)
 	player_set_soft_vol(soft);
 	if (!soft_vol)
 		mixer_open();
-	update_statusline();
+	update_status_line();
 }
 
 static void set_softvol(void *data, const char *buf)
@@ -1157,13 +1157,13 @@ static void set_time_show_leading_zero(void *data, const char *buf)
 {
 	if (!parse_bool(buf, &time_show_leading_zero))
 		return;
-	update_statusline();
+	update_status_line();
 }
 
 static void toggle_time_show_leading_zero(void *data)
 {
 	time_show_leading_zero ^= 1;
-	update_statusline();
+	update_status_line();
 }
 
 static void get_lib_add_filter(void *data, char *buf, size_t size)

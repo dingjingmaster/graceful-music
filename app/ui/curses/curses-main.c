@@ -3,65 +3,54 @@
 //
 #include "curses-main.h"
 
-
-#include "log.h"
-#include "global.h"
-
-#include <stdbool.h>
-
-#include "job.h"
-#include "convert.h"
-#include "cmdline.h"
-#include "search_mode.h"
-#include "command_mode.h"
-#include "options.h"
-#include "play_queue.h"
-#include "browser.h"
-#include "filters.h"
-#include "player.h"
-#include "output.h"
-#include "utils.h"
-#include "lib.h"
-#include "pl.h"
-#include "xmalloc.h"
-#include "xstrjoin.h"
-#include "window.h"
-#include "comment.h"
-#include "misc.h"
-#include "prog.h"
-#include "uchar.h"
-#include "spawn.h"
-#include "server.h"
-#include "keys.h"
-#include "debug.h"
-#include "help.h"
-#include "worker.h"
-#include "input.h"
-#include "file.h"
-#include "path.h"
-#include "mpris.h"
-#include "locking.h"
-#include "graceful-music.h"
-#include "mixer-interface.h"
-
-#ifdef HAVE_CONFIG
-#include "config/curses.h"
-#include "config/iconv.h"
-#endif
-
+#include <math.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
+#include <signal.h>
+#include <stdarg.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
 
-#ifdef HAVE_ICONV
-#include <iconv.h>
-#endif
-#include <math.h>
-#include <signal.h>
-#include <stdarg.h>
+#include "pl.h"
+#include "log.h"
+#include "lib.h"
+#include "job.h"
+#include "misc.h"
+#include "prog.h"
+#include "keys.h"
+#include "help.h"
+#include "file.h"
+#include "path.h"
+#include "utils.h"
+#include "input.h"
+#include "mpris.h"
+#include "debug.h"
+#include "uchar.h"
+#include "spawn.h"
+#include "global.h"
+#include "player.h"
+#include "output.h"
+#include "server.h"
+#include "worker.h"
+#include "window.h"
+#include "convert.h"
+#include "cmdline.h"
+#include "comment.h"
+#include "locking.h"
+#include "xmalloc.h"
+#include "filters.h"
+#include "options.h"
+#include "browser.h"
+#include "xstrjoin.h"
+#include "play_queue.h"
+#include "search_mode.h"
+#include "command_mode.h"
+#include "graceful-music.h"
+#include "mixer-interface.h"
+
 
 #if defined(__sun__) || defined(__CYGWIN__)
 /* TIOCGWINSZ */
@@ -135,7 +124,8 @@ static const int default_esc_delay = 25;
 
 static char *title_buf = NULL;
 
-enum {
+enum
+{
     CURSED_WIN,
     CURSED_WIN_CUR,
     CURSED_WIN_SEL,
@@ -236,7 +226,8 @@ static unsigned char cursed_to_attr_idx[NR_CURSED] = {
 /* index is CURSED_*, value is fucking color pair */
 static int pairs[NR_CURSED];
 
-enum {
+enum
+{
     TF_ALBUMARTIST,
     TF_ARTIST,
     TF_ALBUM,
@@ -1105,11 +1096,11 @@ static void do_update_view(int full)
             if (full || lib_track_win->changed)
                 update_track_window();
             draw_separator();
-            update_filterline();
+            update_filter_line();
             break;
         case SORTED_VIEW:
             update_sorted_window();
-            update_filterline();
+            update_filter_line();
             break;
         case PLAYLIST_VIEW:
             update_pl_view(full);
@@ -1394,7 +1385,7 @@ const char *get_stream_title(void)
     return rv;
 }
 
-void update_titleline(void)
+void update_title_line(void)
 {
     curs_set(0);
     do_update_titleline();
@@ -1403,8 +1394,9 @@ void update_titleline(void)
 
 void update_full(void)
 {
-    if (!gUIInitialized)
+    if (!gUIInitialized) {
         return;
+    }
 
     curs_set(0);
 
@@ -1423,7 +1415,7 @@ static void update_commandline(void)
     post_update();
 }
 
-void update_statusline(void)
+void update_status_line(void)
 {
     if (!gUIInitialized)
         return;
@@ -1433,7 +1425,7 @@ void update_statusline(void)
     post_update();
 }
 
-void update_filterline(void)
+void update_filter_line(void)
 {
     if (gCurView != TREE_VIEW && gCurView != SORTED_VIEW)
         return;
@@ -2154,7 +2146,7 @@ static void main_loop(void)
             mixer_read_volume();
             if (ol != volume_l || or != volume_r) {
                 mpris_volume_changed();
-                update_statusline();
+                update_status_line();
             }
 
         }
@@ -2172,7 +2164,7 @@ static void main_loop(void)
                 DEBUG ("vol changed");
                 mixer_read_volume();
                 mpris_volume_changed();
-                update_statusline();
+                update_status_line();
             }
         }
         for (i = 0; i < nr_fds_out; i++) {
@@ -2180,7 +2172,7 @@ static void main_loop(void)
                 DEBUG ("out changed");
                 if (pause_on_output_change) {
                     player_pause_playback();
-                    update_statusline();
+                    update_status_line();
                 }
                 clear_pipe(fds_out[i], -1);
             }
