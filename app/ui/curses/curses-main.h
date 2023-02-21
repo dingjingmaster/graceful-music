@@ -44,7 +44,7 @@ extern char*                        gPlayQueueFilename;
 extern char*                        gPlayQueueExtFilename;
 
 
-int curses_main(int argc, char *argv[]);
+int curses_main (int argc, char* argv[]);
 
 void update_title_line(void);
 void update_status_line(void);

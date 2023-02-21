@@ -52,7 +52,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 
-int server_socket;
+int gServerSocket;
 LIST_HEAD(client_head);
 
 static char *title_buf = NULL;
@@ -316,7 +316,7 @@ void server_accept(void)
 	socklen_t saddr_size = sizeof(saddr);
 	int fd;
 
-	fd = accept(server_socket, &saddr, &saddr_size);
+	fd = accept(gServerSocket, &saddr, &saddr_size);
 	if (fd == -1)
 		return;
 
@@ -369,12 +369,12 @@ void server_init(char *address)
 		freeaddrinfo(result);
 	}
 
-	server_socket = socket(addr.sa.sa_family, SOCK_STREAM, 0);
-	if (server_socket == -1) {
+	gServerSocket = socket(addr.sa.sa_family, SOCK_STREAM, 0);
+	if (gServerSocket == -1) {
         DIE ("socket");
     }
 
-	if (bind(server_socket, &addr.sa, addrlen) == -1) {
+	if (bind(gServerSocket, &addr.sa, addrlen) == -1) {
 		int sock;
 
 		if (errno != EADDRINUSE) {
@@ -403,7 +403,7 @@ void server_init(char *address)
 			if (unlink(addr.un.sun_path) == -1 && errno != ENOENT) {
                 DIE ("unlink");
             }
-			if (bind(server_socket, &addr.sa, addrlen) == -1) {
+			if (bind(gServerSocket, &addr.sa, addrlen) == -1) {
                 DIE ("bind");
             }
 		} else {
@@ -413,14 +413,14 @@ void server_init(char *address)
 		close(sock);
 	}
 
-	if (listen(server_socket, MAX_CLIENTS) == -1) {
+	if (listen(gServerSocket, MAX_CLIENTS) == -1) {
         DIE ("listen");
     }
 }
 
 void server_exit(void)
 {
-	close(server_socket);
+	close(gServerSocket);
 
 	if (addr.sa.sa_family == AF_UNIX) {
         unlink(addr.un.sun_path);

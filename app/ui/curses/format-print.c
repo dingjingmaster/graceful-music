@@ -575,7 +575,7 @@ FormatPrintLen format_print(struct gbuf *buf, int str_width, const char *format,
 {
     format_read(str_width, format, fopts);
 
-#if DEBUG > 1
+#if DEBUG
     if (str_len.llen > 0) {
 		int ul = u_str_width(l_str.buffer);
 		if (ul != str_len.llen)

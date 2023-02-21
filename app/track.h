@@ -9,13 +9,15 @@
 
 #include <glib.h>
 
-struct shuffle_info {
+struct shuffle_info
+{
 	struct rb_node tree_node;
 	struct album *album;
 	double rand;
 };
 
-struct simple_track {
+struct simple_track
+{
 	struct shuffle_info shuffle_info;
 	struct list_head node;
 	struct rb_node tree_node;

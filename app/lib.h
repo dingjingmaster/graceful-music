@@ -27,7 +27,8 @@ static inline struct tree_track *to_tree_track(const struct rb_node *node)
 }
 
 
-struct album {
+struct album
+{
 	struct shuffle_info shuffle_info;
 
 	/* position in album search tree */

@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-int spawn(char *argv[], int *status, int do_wait)
+int spawn(char* argv[], int* status, int do_wait)
 {
 	pid_t pid;
 	int err_pipe[2];
@@ -67,7 +67,7 @@ int spawn(char *argv[], int *status, int do_wait)
 		int rc, errno_save, child_errno, tmp;
 
 		close(err_pipe[1]);
-		rc = read_all(err_pipe[0], &child_errno, sizeof(int));
+		rc = read_all (err_pipe[0], &child_errno, sizeof(int));
 		errno_save = errno;
 		close(err_pipe[0]);
 

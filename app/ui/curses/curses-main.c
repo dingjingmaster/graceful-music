@@ -61,8 +61,8 @@
 #endif
 
 /* defined in <term.h> but without const */
-char *tgetstr(const char *id, char **area);
-char *tgoto(const char *cap, int col, int row);
+char* tgetstr (const char *id, char **area);
+char* tgoto (const char *cap, int col, int row);
 
 /* globals. documented in ui_curses.h */
 
@@ -82,8 +82,8 @@ extern char*                gCharset;
 
 /* ------------------------------------------------------------------------- */
 
-static char *lib_autosave_filename;
-static char *play_queue_autosave_filename;
+static char*                gLibAutosaveFilename;
+static char*                gPlayQueueAutosaveFilename;
 
 static GBUF(print_buffer);
 
@@ -97,7 +97,7 @@ static GBUF(error_buf);
 static time_t error_time = 0;
 /* info messages are displayed in different color */
 static int msg_is_error;
-static int error_count = 0;
+static int gErrorCount = 0;
 
 /* used for messages to the client */
 static int client_fd = -1;
@@ -116,11 +116,11 @@ static int win_x = 0;
 static int win_w = 0;
 static int win_active = 1;
 
-static int show_cursor;
+static int gShowCursor;
 static int cursor_x;
 static int cursor_y;
 
-static const int default_esc_delay = 25;
+static const int gDefaultEscDelay = 25;
 
 static char *title_buf = NULL;
 
@@ -884,8 +884,7 @@ static void print_help(struct window *win, int row, struct iter *iter)
     dump_print_buffer(row + 1, 0);
 }
 
-static void update_window(struct window *win, int x, int y, int w, const char *title,
-                          void (*print)(struct window *, int, struct iter *))
+static void update_window(struct window *win, int x, int y, int w, const char *title, void (*print)(struct window*, int, struct iter*))
 {
     struct iter iter;
     int nr_rows;
@@ -926,11 +925,11 @@ static void update_track_window(void)
     static GBUF(title);
     gbuf_clear(&title);
 
-    /* it doesn't matter what format options we use because the format
+    /**
+     * it doesn't matter what format options we use because the format
      * string does not contain any format charaters */
     format_print(&title, track_win_w - 2, "Track%= Library", track_fopts);
-    update_window(lib_track_win, track_win_x, 0, track_win_w, title.buffer,
-                  print_track);
+    update_window(lib_track_win, track_win_x, 0, track_win_w, title.buffer, print_track);
 }
 
 static void print_pl_list(struct window *win, int row, struct iter *iter)
@@ -1071,10 +1070,11 @@ static void draw_separator(void)
     int row;
 
     bkgdset(pairs[CURSED_WIN_TITLE]);
-    (void) mvaddch(0, tree_win_w, ' ');
+    (void) mvaddch (0, tree_win_w, ' ');
     bkgdset(pairs[CURSED_SEPARATOR]);
-    for (row = 1; row < LINES - 3; row++)
+    for (row = 1; row < LINES - 3; row++) {
         (void) mvaddch(row, tree_win_w, ACS_VLINE);
+    }
 }
 
 static void update_pl_view(int full)
@@ -1084,17 +1084,19 @@ static void update_pl_view(int full)
     draw_separator();
 }
 
-static void do_update_view(int full)
+static void do_update_view (int full)
 {
     cursor_x = -1;
     cursor_y = -1;
 
     switch (gCurView) {
         case TREE_VIEW:
-            if (full || lib_tree_win->changed)
+            if (full || lib_tree_win->changed) {
                 update_tree_window();
-            if (full || lib_track_win->changed)
+            }
+            if (full || lib_track_win->changed) {
                 update_track_window();
+            }
             draw_separator();
             update_filter_line();
             break;
@@ -1117,10 +1119,13 @@ static void do_update_view(int full)
         case HELP_VIEW:
             update_help_window();
             break;
+        default: {
+            break;
+        }
     }
 }
 
-static void do_update_statusline(void)
+static void do_update_status_line(void)
 {
     format_print(&print_buffer, win_w, statusline_format, get_global_fopts());
     bkgdset(pairs[CURSED_STATUSLINE]);
@@ -1140,7 +1145,7 @@ static void dump_buffer(const char *buffer)
     }
 }
 
-static void do_update_commandline(void)
+static void do_update_command_line(void)
 {
     char *str;
     int w;
@@ -1237,7 +1242,7 @@ static void set_title(const char *title)
     }
 }
 
-static void do_update_titleline(void)
+static void do_update_title_line(void)
 {
     bkgdset(pairs[CURSED_TITLELINE]);
     if (player_info.ti) {
@@ -1302,7 +1307,7 @@ static int cmdline_cursor_column(void)
 
     str = cmdline.line;
     if (!gUsingUtf8) {
-        /* see do_update_commandline */
+        /* see do_update_command_line */
         utf8_encode_to_buf(cmdline.line);
         str = conv_buffer;
     }
@@ -1339,18 +1344,21 @@ static void post_update(void)
         move(LINES - 1, cmdline_cursor_column());
         refresh();
         curs_set(1);
-    } else {
+    }
+    else {
         if (cursor_x >= 0) {
             move(cursor_y, cursor_x);
-        } else {
+        }
+        else {
             move(LINES - 1, 0);
         }
         refresh();
 
         /* visible cursor is useful for screen readers */
-        if (show_cursor) {
+        if (gShowCursor) {
             curs_set(1);
-        } else {
+        }
+        else {
             curs_set(0);
         }
     }
@@ -1388,7 +1396,7 @@ const char *get_stream_title(void)
 void update_title_line(void)
 {
     curs_set(0);
-    do_update_titleline();
+    do_update_title_line();
     post_update();
 }
 
@@ -1401,9 +1409,9 @@ void update_full(void)
     curs_set(0);
 
     do_update_view(1);
-    do_update_titleline();
-    do_update_statusline();
-    do_update_commandline();
+    do_update_title_line();
+    do_update_status_line();
+    do_update_command_line();
 
     post_update();
 }
@@ -1411,7 +1419,7 @@ void update_full(void)
 static void update_commandline(void)
 {
     curs_set(0);
-    do_update_commandline();
+    do_update_command_line();
     post_update();
 }
 
@@ -1421,7 +1429,7 @@ void update_status_line(void)
         return;
 
     curs_set(0);
-    do_update_statusline();
+    do_update_status_line();
     post_update();
 }
 
@@ -1476,7 +1484,7 @@ void error_msg(const char *format, ...)
     }
 
     msg_is_error = 1;
-    error_count++;
+    gErrorCount++;
 
     if (gUIInitialized) {
         error_time = time(NULL);
@@ -1618,6 +1626,9 @@ void set_view(int view)
             gSearchable = help_searchable;
             update_help_window();
             break;
+        default: {
+            return;
+        }
     }
 
     curs_set(0);
@@ -1745,19 +1756,19 @@ static int fill_status_program_track_info_args(char **argv, int i, struct track_
     return i;
 }
 
-static void spawn_status_program_inner(const char *status_text, struct track_info *ti)
+static void spawn_status_program_inner(const char *statusText, struct track_info *ti)
 {
     if (status_display_program == NULL || status_display_program[0] == 0) {
         return;
     }
 
-    char *argv[32];
     int i = 0;
+    char* argv[32] = {0};
 
-    argv[i++] = xstrdup(status_display_program);
+    argv[i++] = g_strdup(status_display_program);
 
-    argv[i++] = xstrdup("status");
-    argv[i++] = xstrdup(status_text);
+    argv[i++] = g_strdup("status");
+    argv[i++] = g_strdup(statusText);
 
     if (ti) {
         i = fill_status_program_track_info_args(argv, i, ti);
@@ -1765,7 +1776,7 @@ static void spawn_status_program_inner(const char *status_text, struct track_inf
     argv[i++] = NULL;
 
     if (spawn(argv, NULL, 0) == -1) {
-        ERROR ("couldn't run `%s': %s", status_display_program, strerror(errno));
+        ERROR ("couldn't run `%s': %s", status_display_program, g_strerror(errno));
     }
     for (i = 0; argv[i]; i++) {
         free(argv[i]);
@@ -1786,19 +1797,19 @@ static void sig_int(int sig)
 
 static void sig_shutdown(int sig)
 {
-    DEBUG ("sig_shutdown %d\n", sig);
+    DEBUG ("sig_shutdown %d", sig);
     gRunning = 0;
 }
 
-static volatile sig_atomic_t needs_to_resize = 0;
+static volatile sig_atomic_t gNeedsToResize = 0;
 
 static void sig_winch(int sig)
 {
-    needs_to_resize = 1;
+    gNeedsToResize = 1;
 }
 
 void update_size(void) {
-    needs_to_resize = 1;
+    gNeedsToResize = 1;
 }
 
 static int get_window_size(int *lines, int *columns)
@@ -1832,22 +1843,22 @@ static void resize_tree_view(int w, int h)
     window_set_nr_rows(lib_track_win, h);
 }
 
-static void update_window_size(void)
+static void update_window_size (void)
 {
     int w, h;
     int columns, lines;
 
     if (get_window_size(&lines, &columns) == 0) {
-        needs_to_resize = 0;
-#if HAVE_RESIZETERM
+        gNeedsToResize = 0;
         resizeterm(lines, columns);
-#endif
         w = COLS;
         h = LINES - 3;
-        if (w < 3)
+        if (w < 3) {
             w = 3;
-        if (h < 2)
+        }
+        if (h < 2) {
             h = 2;
+        }
         win_w = w;
         resize_tree_view(w, h);
         window_set_nr_rows(lib_editable.shared->win, h - 1);
@@ -1863,82 +1874,91 @@ static void update_window_size(void)
 
 static void update(void)
 {
-    int needs_view_update = 0;
-    int needs_title_update = 0;
-    int needs_status_update = 0;
-    int needs_command_update = 0;
-    int needs_spawn = 0;
+    int gNeedsSpawn = 0;
+    int gNeedsViewUpdate = 0;
+    int gNeedsTitleUpdate = 0;
+    int gNeedsStatusUpdate = 0;
+    int gNeedsCommandUpdate = 0;
 
-    if (needs_to_resize) {
+    if (gNeedsToResize) {
         update_window_size();
-        needs_title_update = 1;
-        needs_status_update = 1;
-        needs_command_update = 1;
+        gNeedsTitleUpdate = 1;
+        gNeedsStatusUpdate = 1;
+        gNeedsCommandUpdate = 1;
     }
 
-    if (player_info.status_changed)
+    if (player_info.status_changed) {
         mpris_playback_status_changed();
+    }
 
-    if (player_info.file_changed || player_info.metadata_changed)
+    if (player_info.file_changed || player_info.metadata_changed) {
         mpris_metadata_changed();
+    }
 
-    needs_spawn = player_info.status_changed || player_info.file_changed ||
-                  player_info.metadata_changed;
+    gNeedsSpawn = player_info.status_changed || player_info.file_changed || player_info.metadata_changed;
 
     if (player_info.file_changed) {
-        needs_title_update = 1;
-        needs_status_update = 1;
+        gNeedsTitleUpdate = 1;
+        gNeedsStatusUpdate = 1;
     }
-    if (player_info.metadata_changed)
-        needs_title_update = 1;
-    if (player_info.position_changed || player_info.status_changed)
-        needs_status_update = 1;
+    if (player_info.metadata_changed) {
+        gNeedsTitleUpdate = 1;
+    }
+
+    if (player_info.position_changed || player_info.status_changed) {
+        gNeedsStatusUpdate = 1;
+    }
+
     switch (gCurView) {
         case TREE_VIEW:
-            needs_view_update += lib_tree_win->changed || lib_track_win->changed;
+            gNeedsViewUpdate += lib_tree_win->changed || lib_track_win->changed;
             break;
         case SORTED_VIEW:
-            needs_view_update += lib_editable.shared->win->changed;
+            gNeedsViewUpdate += lib_editable.shared->win->changed;
             break;
         case PLAYLIST_VIEW:
-            needs_view_update += pl_needs_redraw();
+            gNeedsViewUpdate += pl_needs_redraw();
             break;
         case QUEUE_VIEW:
-            needs_view_update += pq_editable.shared->win->changed;
+            gNeedsViewUpdate += pq_editable.shared->win->changed;
             break;
         case BROWSER_VIEW:
-            needs_view_update += browser_win->changed;
+            gNeedsViewUpdate += browser_win->changed;
             break;
         case FILTERS_VIEW:
-            needs_view_update += filters_win->changed;
+            gNeedsViewUpdate += filters_win->changed;
             break;
         case HELP_VIEW:
-            needs_view_update += help_win->changed;
+            gNeedsViewUpdate += help_win->changed;
             break;
+        default: {
+            break;
+        }
     }
 
     /* total time changed? */
     if (play_library) {
-        needs_status_update += lib_editable.shared->win->changed;
+        gNeedsStatusUpdate += lib_editable.shared->win->changed;
         lib_editable.shared->win->changed = 0;
     } else {
-        needs_status_update += pl_needs_redraw();
+        gNeedsStatusUpdate += pl_needs_redraw();
     }
 
-    if (needs_spawn)
+    if (gNeedsSpawn) {
         spawn_status_program();
+    }
 
-    if (needs_view_update || needs_title_update || needs_status_update || needs_command_update) {
+    if (gNeedsViewUpdate || gNeedsTitleUpdate || gNeedsStatusUpdate || gNeedsCommandUpdate) {
         curs_set(0);
 
-        if (needs_view_update)
+        if (gNeedsViewUpdate)
             do_update_view(0);
-        if (needs_title_update)
-            do_update_titleline();
-        if (needs_status_update)
-            do_update_statusline();
-        if (needs_command_update)
-            do_update_commandline();
+        if (gNeedsTitleUpdate)
+            do_update_title_line();
+        if (gNeedsStatusUpdate)
+            do_update_status_line();
+        if (gNeedsCommandUpdate)
+            do_update_command_line();
         post_update();
     }
 }
@@ -2070,15 +2090,15 @@ static void u_getch(void)
 
 static void main_loop(void)
 {
-    int rc, fd_high;
+    int rc, fdHigh;
 
 #define SELECT_ADD_FD(fd) do {\
 	FD_SET((fd), &set); \
-	if ((fd) > fd_high) \
-		fd_high = (fd); \
+	if ((fd) > fdHigh) \
+		fdHigh = (fd); \
 } while(0)
 
-    fd_high = server_socket;
+    fdHigh = gServerSocket;
     while (gRunning) {
         fd_set set;
         struct timeval tv;
@@ -2091,9 +2111,11 @@ static void main_loop(void)
 
         player_info_snapshot();
 
+        // 绘制界面
         update();
 
-        /* Timeout must be so small that screen updates seem instant.
+        /**
+         * Timeout must be so small that screen updates seem instant.
          * Only affects changes done in other threads (player).
          *
          * Too small timeout makes window updates too fast (wastes CPU).
@@ -2113,7 +2135,7 @@ static void main_loop(void)
         SELECT_ADD_FD(0);
         SELECT_ADD_FD(job_fd);
         SELECT_ADD_FD(gNextTrackRequestFd);
-        SELECT_ADD_FD(server_socket);
+        SELECT_ADD_FD(gServerSocket);
         if (mpris_fd != -1)
             SELECT_ADD_FD(mpris_fd);
         list_for_each_entry(client, &client_head, node) {
@@ -2138,7 +2160,7 @@ static void main_loop(void)
             SELECT_ADD_FD(fds_out[i]);
         }
 
-        rc = select(fd_high + 1, &set, NULL, NULL, tv.tv_usec ? &tv : NULL);
+        rc = select(fdHigh + 1, &set, NULL, NULL, tv.tv_usec ? &tv : NULL);
         if (poll_mixer) {
             int ol = volume_l;
             int or = volume_r;
@@ -2177,34 +2199,40 @@ static void main_loop(void)
                 clear_pipe(fds_out[i], -1);
             }
         }
-        if (FD_ISSET(server_socket, &set))
+        if (FD_ISSET(gServerSocket, &set)) {
             server_accept();
+        }
 
         // server_serve() can remove client from the list
         item = client_head.next;
         while (item != &client_head) {
             struct list_head *next = item->next;
             client = container_of(item, struct client, node);
-            if (FD_ISSET(client->fd, &set))
+            if (FD_ISSET(client->fd, &set)) {
                 server_serve(client);
+            }
             item = next;
         }
 
-        if (FD_ISSET(0, &set))
+        if (FD_ISSET(0, &set)) {
             u_getch();
+        }
 
-        if (mpris_fd != -1 && FD_ISSET(mpris_fd, &set))
+        if (mpris_fd != -1 && FD_ISSET(mpris_fd, &set)) {
             mpris_process();
+        }
 
-        if (FD_ISSET(job_fd, &set))
+        if (FD_ISSET(job_fd, &set)) {
             job_handle();
+        }
 
-        if (FD_ISSET(gNextTrackRequestFd, &set))
+        if (FD_ISSET(gNextTrackRequestFd, &set)) {
             gm_provide_next_track();
+        }
     }
 }
 
-static void init_curses(void)
+static void init_curses (void)
 {
     struct sigaction act;
     char *ptr, *term;
@@ -2230,23 +2258,23 @@ static void init_curses(void)
     act.sa_handler = sig_winch;
     sigaction(SIGWINCH, &act, NULL);
 
-    //
-    initscr();
-    nodelay(stdscr, TRUE);
-    keypad(stdscr, TRUE);
+    // start
+    initscr ();
+    nodelay (stdscr, TRUE);
+    keypad (stdscr, TRUE);
     halfdelay(5);
     noecho();
 
     if (has_colors()) {
-#if HAVE_USE_DEFAULT_COLORS
         start_color();
 		use_default_colors();
-#endif
     }
+
     DEBUG ("Number of supported colors: %d", COLORS);
     gUIInitialized = 1;
 
-    /* this was disabled while initializing because it needs to be
+    /**
+     * this was disabled while initializing because it needs to be
      * called only once after all colors have been set
      */
     update_colors();
@@ -2256,8 +2284,9 @@ static void init_curses(void)
     t_fs = tgetstr("fs", &ptr);
     DEBUG ("ts: %d fs: %d", !!t_ts, !!t_fs);
 
-    if (!t_fs)
+    if (!t_fs) {
         t_ts = NULL;
+    }
 
     term = getenv("TERM");
     if (!t_ts && term) {
@@ -2272,9 +2301,8 @@ static void init_curses(void)
         if (!strcmp(term, "screen")) {
             t_ts = "\033_";
             t_fs = "\033\\";
-        } else if (!strncmp(term, "xterm", 5) ||
-                   !strncmp(term, "rxvt", 4) ||
-                   !strcmp(term, "Eterm")) {
+        }
+        else if (!strncmp(term, "xterm", 5) || !strncmp(term, "rxvt", 4) || !strcmp(term, "Eterm")) {
             /* \033]1;  change icon
              * \033]2;  change title
              * \033]0;  change both
@@ -2283,10 +2311,11 @@ static void init_curses(void)
             t_fs = "\007";
         }
     }
+
     update_mouse();
 
     if (!getenv("ESCDELAY")) {
-        set_escdelay(default_esc_delay);
+        set_escdelay(gDefaultEscDelay);
     }
 
     update_window_size();
@@ -2326,33 +2355,34 @@ static void init_all (void)
         mixer_open();
     }
 
-    lib_autosave_filename = xstrjoin(gConfigDir, "/lib.pl");
-    play_queue_autosave_filename = xstrjoin(gConfigDir, "/queue.pl");
+    gLibAutosaveFilename = g_strdup_printf("%s/lib.pl", gConfigDir);
+    gPlayQueueAutosaveFilename = g_strdup_printf("%s/queue.pl", gConfigDir);
 
-    gLibFilename = xstrdup(lib_autosave_filename);
+    gLibFilename = g_strdup (gLibAutosaveFilename);
 
-    if (error_count) {
+    if (gErrorCount) {
         char buf[16];
         char *ret;
 
         warn("Press <enter> to continue.");
 
-        ret = fgets(buf, sizeof(buf), stdin);
+        ret = fgets (buf, sizeof(buf), stdin);
         BUG_ON(ret == NULL);
     }
-//    help_add_all_unbound();
+    help_add_all_unbound();
 
+    /* 初始化 curses 界面 */
     init_curses();
 
     if (resume_cmus) {
         resume_load();
-        gm_add(play_queue_append, play_queue_autosave_filename, FILE_TYPE_PL, JOB_TYPE_QUEUE, 0, NULL);
+        gm_add(play_queue_append, gPlayQueueAutosaveFilename, FILE_TYPE_PL, JOB_TYPE_QUEUE, 0, NULL);
     }
     else {
         set_view(start_view);
     }
 
-    gm_add(lib_add_track, lib_autosave_filename, FILE_TYPE_PL, JOB_TYPE_LIB, 0, NULL);
+    gm_add(lib_add_track, gLibAutosaveFilename, FILE_TYPE_PL, JOB_TYPE_LIB, 0, NULL);
 
     worker_start();
 }
@@ -2367,10 +2397,10 @@ static void exit_all(void)
 
     server_exit();
     gm_exit();
-    if (resume_cmus)
-        gm_save(play_queue_for_each, play_queue_autosave_filename,
-                NULL);
-    gm_save(lib_for_each, lib_autosave_filename, NULL);
+    if (resume_cmus) {
+        gm_save(play_queue_for_each, gPlayQueueAutosaveFilename, NULL);
+    }
+    gm_save(lib_for_each, gLibAutosaveFilename, NULL);
 
     pl_exit();
     player_exit();
@@ -2383,25 +2413,27 @@ static void exit_all(void)
     mpris_free();
 }
 
-enum {
+enum
+{
     FLAG_LISTEN,
     FLAG_PLUGINS,
-    FLAG_SHOW_CURSOR,
+    FLAG_gShowCursor,
     FLAG_HELP,
     FLAG_VERSION,
     NR_FLAGS
 };
 
-static struct option options[NR_FLAGS + 1] = {
-    { 0, "listen", 1 },
-    { 0, "plugins", 0 },
-    { 0, "show-cursor", 0 },
-    { 0, "help", 0 },
-    { 0, "version", 0 },
-    { 0, NULL, 0 }
-};
+static struct option options[NR_FLAGS + 1] =
+    {
+        {0, "listen", 1 },
+        {0, "plugins", 0 },
+        {0, "show-cursor", 0 },
+        {0, "help", 0 },
+        {0, "version", 0 },
+        {0, NULL, 0 }
+    };
 
-static const char *usage =
+static const char* usage =
     "Usage: %s [OPTION]...\n"
     "Curses based music player.\n"
     "\n"
@@ -2412,9 +2444,7 @@ static const char *usage =
     "      --show-cursor   always visible cursor\n"
     "      --help          display this help and exit\n"
     "      --version       " VERSION "\n"
-    "\n"
-    "Use cmus-remote to control cmus from command line.\n"
-    "Report bugs to <cmus-devel@lists.sourceforge.net>.\n";
+    ;
 
 int curses_main (int argc, char* argv[])
 {
@@ -2445,8 +2475,8 @@ int curses_main (int argc, char* argv[])
 		case FLAG_LISTEN:
 			server_address = xstrdup(arg);
 			break;
-		case FLAG_SHOW_CURSOR:
-			show_cursor = 1;
+		case FLAG_gShowCursor:
+			gShowCursor = 1;
 			break;
 		}
 	}
@@ -2469,7 +2499,9 @@ int curses_main (int argc, char* argv[])
     LOG_DEBUG ("Load plugin ok!");
 
     init_all();
+
     main_loop();
+
     exit_all();
     spawn_status_program_inner("exiting", NULL);
 

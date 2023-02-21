@@ -9,7 +9,7 @@ struct client {
 	unsigned int authenticated : 1;
 };
 
-extern int server_socket;
+extern int gServerSocket;
 extern struct list_head client_head;
 
 void server_init(char *address);
